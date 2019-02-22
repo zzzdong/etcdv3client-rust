@@ -39,7 +39,7 @@ impl SimpleKVClient {
         resp.get_kvs()
             .first()
             .map(|kv| kv.get_value().to_vec())
-            .ok_or_else(|| EtcdClientError::KeyNotFound(key.to_string()))
+            .ok_or_else(|| EtcdClientError::KeyNotFound)
     }
 
     #[inline]
@@ -79,10 +79,7 @@ impl SimpleKVClient {
         Ok(())
     }
 
-    pub fn get_str(
-        &self,
-        key: &'static str,
-    ) -> impl Future<Item = String, Error = EtcdClientError> {
+    pub fn get_str(&self, key: &str) -> impl Future<Item = String, Error = EtcdClientError> {
         let mut req = RangeRequest::new();
         req.set_key(key.as_bytes().to_vec());
 
@@ -94,7 +91,7 @@ impl SimpleKVClient {
                 resp.get_kvs()
                     .first()
                     .map(|kv| kv.get_value().to_vec())
-                    .ok_or_else(|| EtcdClientError::KeyNotFound(key.to_owned().clone()))
+                    .ok_or_else(|| EtcdClientError::KeyNotFound)
             })
             .and_then(|b| String::from_utf8(b).map_err(EtcdClientError::FromUtf8))
     }
