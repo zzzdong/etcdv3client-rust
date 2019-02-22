@@ -1,10 +1,8 @@
 
-use etcdv3client::EtcdV3Client;
+use etcdv3client::{EtcdV3Client, EtcdClientError};
 
 
 fn main() {
-    println!("Hello, world!");
-
     env_logger::init();
 
     let key = "hello";
@@ -17,10 +15,18 @@ fn main() {
 
     let kv_client = etcd_client.new_kvclient();
     
-    let value = kv_client.get_string(key).unwrap();
-    let value = format!("{}+", value);
-
-    kv_client.put_string(key, &value).unwrap();
-
-    dbg!(&value);
+    match kv_client.get_string(key) {
+        Ok(v) => {
+            let value = format!("{}+", v);
+            kv_client.put_string(key, &value).unwrap();
+            println!("get {}: {}, put new: {}", key, v, value);
+        }
+        Err(EtcdClientError::KeyNotFound(k)) => {
+            kv_client.put_string(key, &value).unwrap();
+            println!("cannot find {}", k)
+        }
+        Err(e) => {
+            println!("etcd get failed, {:?}", e);
+        }
+    }
 }
