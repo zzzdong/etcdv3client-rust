@@ -5,7 +5,6 @@ use std::sync::Arc;
 use futures::Future;
 
 use grpc::ClientStub;
-use grpc::ClientStubExt;
 
 pub use crate::pb::rpc::{CompactionRequest, CompactionResponse};
 pub use crate::pb::rpc::{DeleteRangeRequest, DeleteRangeResponse};
@@ -15,7 +14,6 @@ pub use crate::pb::rpc::{TxnRequest, TxnResponse};
 pub use crate::pb::rpc_grpc::{KVClient, KV as Service};
 
 use crate::client::EtcdClientError;
-use crate::pb::kv::KeyValue;
 
 pub struct SimpleKVClient {
     inner: KVClient,
@@ -31,7 +29,6 @@ impl SimpleKVClient {
     pub fn get_bytes(&self, key: &str) -> Result<Vec<u8>, EtcdClientError> {
         let mut req = RangeRequest::new();
         req.set_key(key.as_bytes().to_vec());
-        let empty_kv = KeyValue::new();
 
         let resp = self
             .inner
@@ -39,15 +36,16 @@ impl SimpleKVClient {
             .wait_drop_metadata()
             .map_err(EtcdClientError::GRPC)?;
 
-        let v = resp.get_kvs().first().unwrap_or(&empty_kv).get_value();
-
-        Ok(v.to_vec())
+        resp.get_kvs()
+            .first()
+            .map(|kv| kv.get_value().to_vec())
+            .ok_or_else(|| EtcdClientError::KeyNotFound(key.to_string()))
     }
 
     #[inline]
     pub fn get_string(&self, key: &str) -> Result<String, EtcdClientError> {
-        let v = self.get_bytes(key)?;
-        String::from_utf8(v.to_vec()).map_err(EtcdClientError::FromUtf8)
+        self.get_bytes(key)
+            .and_then(|e| String::from_utf8(e).map_err(EtcdClientError::FromUtf8))
     }
 
     pub fn put_bytes(&self, key: &str, value: Vec<u8>) -> Result<(), EtcdClientError> {
@@ -81,7 +79,10 @@ impl SimpleKVClient {
         Ok(())
     }
 
-    pub fn get_str(&self, key: &str) -> impl Future<Item = String, Error = EtcdClientError> {
+    pub fn get_str(
+        &self,
+        key: &'static str,
+    ) -> impl Future<Item = String, Error = EtcdClientError> {
         let mut req = RangeRequest::new();
         req.set_key(key.as_bytes().to_vec());
 
@@ -89,10 +90,12 @@ impl SimpleKVClient {
             .range(grpc::RequestOptions::new(), req)
             .drop_metadata()
             .map_err(EtcdClientError::GRPC)
-            .and_then(|resp| {
-                let empty_kv = KeyValue::new();
-                let v = resp.get_kvs().first().unwrap_or(&empty_kv).get_value();
-                String::from_utf8(v.to_vec()).map_err(EtcdClientError::FromUtf8)
+            .and_then(move |resp| {
+                resp.get_kvs()
+                    .first()
+                    .map(|kv| kv.get_value().to_vec())
+                    .ok_or_else(|| EtcdClientError::KeyNotFound(key.to_owned().clone()))
             })
+            .and_then(|b| String::from_utf8(b).map_err(EtcdClientError::FromUtf8))
     }
 }

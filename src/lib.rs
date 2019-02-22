@@ -1,10 +1,8 @@
-pub mod pb;
 pub mod client;
 pub mod kv;
-
+pub mod pb;
 
 pub use client::*;
-
 
 #[cfg(test)]
 mod tests {

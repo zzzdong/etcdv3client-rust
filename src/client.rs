@@ -13,6 +13,8 @@ pub enum EtcdClientError {
     GRPC(grpc::Error),
     #[fail(display = "from utf8 error: {}", _0)]
     FromUtf8(FromUtf8Error),
+    #[fail(display = "key `{}` not found", _0)]
+    KeyNotFound(String),
 }
 
 pub struct EtcdV3Client {
