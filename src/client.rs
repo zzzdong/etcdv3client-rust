@@ -30,7 +30,7 @@ impl EtcdV3Client {
         Ok(EtcdV3Client { conn: grpc_client })
     }
 
-    pub fn new_kvclient(&self) -> SimpleKVClient {
+    pub fn new_simple_kv(&self) -> SimpleKVClient {
         SimpleKVClient::new(self.conn.clone())
     }
 }

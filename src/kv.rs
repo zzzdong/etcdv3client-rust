@@ -15,17 +15,20 @@ pub use crate::pb::rpc_grpc::{KVClient, KV as Service};
 
 use crate::client::EtcdClientError;
 
+/// KVClient which use String as key
 pub struct SimpleKVClient {
     inner: KVClient,
 }
 
 impl SimpleKVClient {
+    /// Reture a SimpleKVClient
     pub fn new(client: Arc<grpc::Client>) -> SimpleKVClient {
         SimpleKVClient {
             inner: KVClient::with_client(client),
         }
     }
 
+    /// Get bytes by key
     pub fn get_bytes(&self, key: &str) -> Result<Vec<u8>, EtcdClientError> {
         let mut req = RangeRequest::new();
         req.set_key(key.as_bytes().to_vec());
@@ -42,12 +45,14 @@ impl SimpleKVClient {
             .ok_or_else(|| EtcdClientError::KeyNotFound)
     }
 
+    /// Get String by key
     #[inline]
     pub fn get_string(&self, key: &str) -> Result<String, EtcdClientError> {
         self.get_bytes(key)
             .and_then(|e| String::from_utf8(e).map_err(EtcdClientError::FromUtf8))
     }
 
+    /// Put bytes with key
     pub fn put_bytes(&self, key: &str, value: Vec<u8>) -> Result<(), EtcdClientError> {
         let mut req = PutRequest::new();
         req.set_key(key.as_bytes().to_vec());
@@ -62,11 +67,13 @@ impl SimpleKVClient {
         Ok(())
     }
 
+    /// Put String with key
     #[inline]
     pub fn put_string(&self, key: &str, value: &str) -> Result<(), EtcdClientError> {
         self.put_bytes(key, value.as_bytes().to_vec())
     }
 
+    /// Delete a key
     pub fn delete(&self, key: &str) -> Result<(), EtcdClientError> {
         let mut req = DeleteRangeRequest::new();
         req.set_key(key.as_bytes().to_vec());

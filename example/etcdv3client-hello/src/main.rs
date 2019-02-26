@@ -11,7 +11,7 @@ fn main() {
 
     let etcd_client = EtcdV3Client::new(host, port).unwrap();
 
-    let kv_client = etcd_client.new_kvclient();
+    let kv_client = etcd_client.new_simple_kv();
 
     match kv_client.get_string(key) {
         Ok(v) => {
