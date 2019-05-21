@@ -35,10 +35,10 @@ impl SimpleKVClient {
         }
     }
 
-    /// Get bytes by key
-    pub fn get_bytes(&self, key: &str) -> Result<Vec<u8>, EtcdClientError> {
+    /// Get bytes kv
+    pub fn get_bytes_kv(&self, key: Vec<u8>) -> Result<Vec<u8>, EtcdClientError> {
         let mut req = RangeRequest::new();
-        req.set_key(key.as_bytes().to_vec());
+        req.set_key(key.to_vec());
 
         let resp = self
             .inner
@@ -52,6 +52,12 @@ impl SimpleKVClient {
             .ok_or_else(|| EtcdClientError::KeyNotFound)
     }
 
+    /// Get bytes by key
+    #[inline]
+    pub fn get_bytes(&self, key: &str) -> Result<Vec<u8>, EtcdClientError> {
+        self.get_bytes_kv(key.as_bytes().to_vec())
+    }
+
     /// Get String by key
     #[inline]
     pub fn get_string(&self, key: &str) -> Result<String, EtcdClientError> {
@@ -59,10 +65,10 @@ impl SimpleKVClient {
             .and_then(|e| String::from_utf8(e).map_err(EtcdClientError::FromUtf8))
     }
 
-    /// Put bytes with key
-    pub fn put_bytes(&self, key: &str, value: Vec<u8>) -> Result<(), EtcdClientError> {
+    /// Put bytes Kv
+    pub fn put_bytes_kv(&self, key: Vec<u8>, value: Vec<u8>) -> Result<(), EtcdClientError> {
         let mut req = PutRequest::new();
-        req.set_key(key.as_bytes().to_vec());
+        req.set_key(key);
         req.set_value(value);
 
         let _resp = self
@@ -74,16 +80,23 @@ impl SimpleKVClient {
         Ok(())
     }
 
+    /// Put bytes with key
+    #[inline]
+    pub fn put_bytes(&self, key: &str, value: Vec<u8>) -> Result<(), EtcdClientError> {
+        self.put_bytes_kv(key.as_bytes().to_vec(), value)
+    }
+
     /// Put String with key
     #[inline]
     pub fn put_string(&self, key: &str, value: &str) -> Result<(), EtcdClientError> {
         self.put_bytes(key, value.as_bytes().to_vec())
     }
 
-    /// Delete a key
-    pub fn delete(&self, key: &str) -> Result<(), EtcdClientError> {
+    /// Delete bytes key
+    pub fn delete_bytes_key(&self, key: Vec<u8>) -> Result<(), EtcdClientError> {
         let mut req = DeleteRangeRequest::new();
-        req.set_key(key.as_bytes().to_vec());
+        req.set_key(key);
+
         let _resp = self
             .inner
             .delete_range(grpc::RequestOptions::new(), req)
@@ -91,6 +104,12 @@ impl SimpleKVClient {
             .map_err(EtcdClientError::GRPC)?;
 
         Ok(())
+    }
+
+    /// Delete a key
+    #[inline]
+    pub fn delete(&self, key: &str) -> Result<(), EtcdClientError> {
+        self.delete_bytes_key(key.as_bytes().to_vec())
     }
 
     /// Get bytes with prefix
@@ -119,6 +138,7 @@ impl SimpleKVClient {
         Ok(kvs)
     }
 
+    /// Get all keyvalue
     pub fn get_all(&self) -> Result<Vec<KeyValue>, EtcdClientError> {
         let mut req = RangeRequest::new();
 
@@ -131,11 +151,7 @@ impl SimpleKVClient {
             .wait_drop_metadata()
             .map_err(EtcdClientError::GRPC)?;
 
-        let kvs = resp
-            .get_kvs()
-            .iter()
-            .map(|kv| kv.clone())
-            .collect();
+        let kvs = resp.get_kvs().to_vec();
 
         Ok(kvs)
     }
@@ -161,7 +177,7 @@ impl SimpleKVClient {
         let no_prefix_end = Vec::new();
 
         let b = prefix.as_bytes();
-        if b.len() == 0 {
+        if b.is_empty() {
             return no_prefix_end;
         }
 
@@ -169,11 +185,11 @@ impl SimpleKVClient {
 
         for i in (0..end.len()).rev() {
             if end[i] < 0xff {
-                end[i] = end[i] + 1;
-                return end[0..i + 1].to_vec();
+                end[i] += 1;
+                return end[0..=1].to_vec();
             }
         }
 
-        return no_prefix_end;
+        no_prefix_end
     }
 }
