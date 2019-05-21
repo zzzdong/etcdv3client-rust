@@ -6,6 +6,7 @@ use futures::Future;
 
 use grpc::ClientStub;
 
+pub use crate::pb::kv::KeyValue;
 pub use crate::pb::rpc::{CompactionRequest, CompactionResponse};
 pub use crate::pb::rpc::{DeleteRangeRequest, DeleteRangeResponse};
 pub use crate::pb::rpc::{PutRequest, PutResponse};
@@ -95,8 +96,7 @@ impl SimpleKVClient {
     /// Get bytes with prefix
     pub fn get_with_prefix(&self, prefix: &str) -> Result<Vec<SimpleKV>, EtcdClientError> {
         let mut req = RangeRequest::new();
-        let mut end = prefix.as_bytes().to_vec();
-        end.push(0xFF);
+        let end = Self::build_prefix_end(prefix);
 
         req.set_key(prefix.as_bytes().to_vec());
         req.set_range_end(end);
@@ -107,7 +107,7 @@ impl SimpleKVClient {
             .wait_drop_metadata()
             .map_err(EtcdClientError::GRPC)?;
 
-        let kv = resp
+        let kvs = resp
             .get_kvs()
             .iter()
             .map(|kv| SimpleKV {
@@ -116,7 +116,28 @@ impl SimpleKVClient {
             })
             .collect();
 
-        Ok(kv)
+        Ok(kvs)
+    }
+
+    pub fn get_all(&self) -> Result<Vec<KeyValue>, EtcdClientError> {
+        let mut req = RangeRequest::new();
+
+        req.set_key(vec![0x00]);
+        req.set_range_end(vec![0x00]);
+
+        let resp = self
+            .inner
+            .range(grpc::RequestOptions::new(), req)
+            .wait_drop_metadata()
+            .map_err(EtcdClientError::GRPC)?;
+
+        let kvs = resp
+            .get_kvs()
+            .iter()
+            .map(|kv| kv.clone())
+            .collect();
+
+        Ok(kvs)
     }
 
     pub fn get_str(&self, key: &str) -> impl Future<Item = String, Error = EtcdClientError> {
@@ -134,5 +155,25 @@ impl SimpleKVClient {
                     .ok_or_else(|| EtcdClientError::KeyNotFound)
             })
             .and_then(|b| String::from_utf8(b).map_err(EtcdClientError::FromUtf8))
+    }
+
+    fn build_prefix_end(prefix: &str) -> Vec<u8> {
+        let no_prefix_end = Vec::new();
+
+        let b = prefix.as_bytes();
+        if b.len() == 0 {
+            return no_prefix_end;
+        }
+
+        let mut end = b.to_vec();
+
+        for i in (0..end.len()).rev() {
+            if end[i] < 0xff {
+                end[i] = end[i] + 1;
+                return end[0..i + 1].to_vec();
+            }
+        }
+
+        return no_prefix_end;
     }
 }
