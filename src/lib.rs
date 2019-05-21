@@ -1,10 +1,9 @@
-pub mod client;
+pub mod comm;
 pub mod kv;
-pub mod pb;
 
-pub use client::*;
+pub use comm::EtcdClientError;
+pub use kv::{SimpleKV, SimpleKvClient};
 
-#[cfg(test)]
 mod tests {
     #[test]
     fn it_works() {

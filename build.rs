@@ -1,20 +1,22 @@
-#[cfg(feature = "gen")]
-extern crate protobuf_codegen_pure;
-
-#[cfg(feature = "gen")]
-fn generate_protobuf_binding_file() {
-    protobuf_codegen_pure::run(protobuf_codegen_pure::Args {
-        out_dir: "src/pb",
-        includes: &["proto"],
-        input: &["proto/rpc.proto", "proto/kv.proto", "proto/auth.proto"],
-        ..Default::default()
-    })
-    .unwrap();
-}
-
-#[cfg(not(feature = "gen"))]
-fn generate_protobuf_binding_file() {}
-
 fn main() {
-    generate_protobuf_binding_file()
+    // Build auth.proto
+    tower_grpc_build::Config::new()
+        .enable_server(true)
+        .enable_client(true)
+        .build(&["proto/auth.proto"], &["proto/"])
+        .unwrap_or_else(|e| panic!("protobuf compilation failed: {}", e));
+
+    // Build kv.proto
+    tower_grpc_build::Config::new()
+        .enable_server(true)
+        .enable_client(true)
+        .build(&["proto/kv.proto"], &["proto/"])
+        .unwrap_or_else(|e| panic!("protobuf compilation failed: {}", e));
+
+    // Build rpc
+    tower_grpc_build::Config::new()
+        .enable_server(true)
+        .enable_client(true)
+        .build(&["proto/rpc.proto"], &["proto"])
+        .unwrap_or_else(|e| panic!("protobuf compilation failed: {}", e));
 }

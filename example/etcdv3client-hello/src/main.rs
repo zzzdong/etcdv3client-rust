@@ -1,30 +1,31 @@
-use etcdv3client::{EtcdClientError, EtcdV3Client};
+use futures::Future;
+
+use etcdv3client::SimpleKvClient;
 
 fn main() {
     env_logger::init();
 
     let key = "hello";
+    let prefix = "hello";
     let value = "world";
 
     let host: &str = "127.0.0.1";
     let port: u16 = 2379;
 
-    let etcd_client = EtcdV3Client::new(host, port).unwrap();
+    let run = SimpleKvClient::new(host, port)
+        .and_then(move |mut client| client.get_string(key.clone()).map(|resp| (client, resp)))
+        .and_then(move |(mut client, resp)| {
+            println!("resp=> {:?}", resp);
 
-    let kv_client = etcd_client.new_simple_kv();
+            client.get_with_prefix(prefix)
+        })
+        .and_then(|kvs| {
+            for kv in kvs {
+                println!("{} => {:?}", kv.key, String::from_utf8_lossy(&kv.value))
+            }
+            Ok(())
+        })
+        .map_err(|e| println!("ERR = {:?}", e));
 
-    match kv_client.get_string(key) {
-        Ok(v) => {
-            let value = format!("{}+", v);
-            kv_client.put_string(key, &value).unwrap();
-            println!("get {}: {}, put new: {}", key, v, value);
-        }
-        Err(EtcdClientError::KeyNotFound) => {
-            kv_client.put_string(key, &value).unwrap();
-            println!("cannot find {}", key);
-        }
-        Err(e) => {
-            println!("etcd get failed, {:?}", e);
-        }
-    }
+    tokio::run(run);
 }
