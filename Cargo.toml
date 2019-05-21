@@ -9,7 +9,7 @@ gen = ["protobuf-codegen-pure"]
 
 [dependencies]
 grpc            = "0.6.1"
-protobuf        = { version = "2.0" }
+protobuf        = { version = "2.6" }
 failure         = "~0.1"
 futures         = "~0.1"
 futures-cpupool = "~0.1"
@@ -20,4 +20,4 @@ env_logger      = "~0.5"
 tokio = "~0.1"
 
 [build-dependencies]
-protobuf-codegen-pure = {version = "2.0", optional = true}
+protobuf-codegen-pure = {version = "2.6", optional = true}
