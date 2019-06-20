@@ -9,7 +9,7 @@ fn main() {
     let host: &str = "127.0.0.1";
     let port: u16 = 2379;
 
-    let etcd_client = EtcdV3Client::new(host, port).unwrap();
+    let etcd_client = EtcdV3Client::new(host, port).expect("can not connect etcd server");
 
     let kv_client = etcd_client.new_simple_kv();
 

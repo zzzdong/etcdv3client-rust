@@ -1,12 +1,12 @@
 [package]
 name = "etcdv3client-hello"
 version = "0.1.0"
-authors = ["opensuse <kuwater@163.com>"]
+authors = ["zzzdong <kuwater@163.com>"]
 edition = "2018"
 
 [dependencies]
 log = "0.4"
-env_logger = "0.5"
+env_logger = "0.6"
 # etcdv3client = {path="../../"}
 
 

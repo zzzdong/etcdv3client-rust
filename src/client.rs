@@ -6,6 +6,7 @@ use std::sync::Arc;
 use failure::Fail;
 
 use crate::kv::SimpleKVClient;
+use crate::auth::SimpleAuthClient;
 
 #[derive(Debug, Fail)]
 pub enum EtcdClientError {
@@ -15,6 +16,8 @@ pub enum EtcdClientError {
     FromUtf8(FromUtf8Error),
     #[fail(display = "key not found")]
     KeyNotFound,
+    #[fail(display = "auth failed")]
+    AuthFailed,
 }
 
 pub struct EtcdV3Client {
@@ -30,7 +33,15 @@ impl EtcdV3Client {
         Ok(EtcdV3Client { conn: grpc_client })
     }
 
+    // pub fn auth(self, user: &str, password: &str) -> Result<EtcdV3Client, EtcdClientError> {
+    //     self.new_auth().get_token(user, password).map(|_|self).map_err(|_| EtcdClientError::AuthFailed)
+    // }
+
     pub fn new_simple_kv(&self) -> SimpleKVClient {
         SimpleKVClient::new(self.conn.clone())
+    }
+
+    pub fn new_auth(&self) -> SimpleAuthClient {
+        SimpleAuthClient::new(self.conn.clone())
     }
 }
