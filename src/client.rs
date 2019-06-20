@@ -5,8 +5,8 @@ use std::sync::Arc;
 
 use failure::Fail;
 
-use crate::kv::SimpleKVClient;
 use crate::auth::SimpleAuthClient;
+use crate::kv::SimpleKVClient;
 
 #[derive(Debug, Fail)]
 pub enum EtcdClientError {

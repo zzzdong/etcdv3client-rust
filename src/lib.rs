@@ -1,8 +1,7 @@
-pub mod client;
 pub mod auth;
+pub mod client;
 pub mod kv;
 pub mod pb;
-
 
 pub use client::*;
 

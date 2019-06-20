@@ -1,7 +1,5 @@
 use std::sync::Arc;
 
-use futures::Future;
-
 use grpc::ClientStub;
 
 pub use crate::pb::kv::KeyValue;
@@ -27,10 +25,12 @@ impl SimpleAuthClient {
         req.set_name(name.to_string());
         req.set_password(password.to_string());
 
-        let resp = self.inner.authenticate(grpc::RequestOptions::new(), req).wait_drop_metadata()
+        let resp = self
+            .inner
+            .authenticate(grpc::RequestOptions::new(), req)
+            .wait_drop_metadata()
             .map_err(EtcdClientError::GRPC)?;
-        
+
         Ok(resp.get_token().to_string())
     }
-
 }

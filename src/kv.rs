@@ -35,10 +35,10 @@ impl SimpleKVClient {
         }
     }
 
-    /// Get bytes kv
-    pub fn get_bytes_kv(&self, key: Vec<u8>) -> Result<Vec<u8>, EtcdClientError> {
+    /// Get bytes by key
+    pub fn get(&self, key: impl AsRef<[u8]>) -> Result<Vec<u8>, EtcdClientError> {
         let mut req = RangeRequest::new();
-        req.set_key(key.to_vec());
+        req.set_key(key.as_ref().to_vec());
 
         let resp = self
             .inner
@@ -52,24 +52,22 @@ impl SimpleKVClient {
             .ok_or_else(|| EtcdClientError::KeyNotFound)
     }
 
-    /// Get bytes by key
-    #[inline]
-    pub fn get_bytes(&self, key: &str) -> Result<Vec<u8>, EtcdClientError> {
-        self.get_bytes_kv(key.as_bytes().to_vec())
-    }
-
     /// Get String by key
     #[inline]
-    pub fn get_string(&self, key: &str) -> Result<String, EtcdClientError> {
-        self.get_bytes(key)
+    pub fn get_string(&self, key: impl AsRef<[u8]>) -> Result<String, EtcdClientError> {
+        self.get(key)
             .and_then(|e| String::from_utf8(e).map_err(EtcdClientError::FromUtf8))
     }
 
-    /// Put bytes Kv
-    pub fn put_bytes_kv(&self, key: Vec<u8>, value: Vec<u8>) -> Result<(), EtcdClientError> {
+    /// Put bytes with key
+    pub fn put(
+        &self,
+        key: impl AsRef<[u8]>,
+        value: impl AsRef<[u8]>,
+    ) -> Result<(), EtcdClientError> {
         let mut req = PutRequest::new();
-        req.set_key(key);
-        req.set_value(value);
+        req.set_key(key.as_ref().to_vec());
+        req.set_value(value.as_ref().to_vec());
 
         let _resp = self
             .inner
@@ -80,22 +78,10 @@ impl SimpleKVClient {
         Ok(())
     }
 
-    /// Put bytes with key
-    #[inline]
-    pub fn put_bytes(&self, key: &str, value: Vec<u8>) -> Result<(), EtcdClientError> {
-        self.put_bytes_kv(key.as_bytes().to_vec(), value)
-    }
-
-    /// Put String with key
-    #[inline]
-    pub fn put_string(&self, key: &str, value: &str) -> Result<(), EtcdClientError> {
-        self.put_bytes(key, value.as_bytes().to_vec())
-    }
-
-    /// Delete bytes key
-    pub fn delete_bytes_key(&self, key: Vec<u8>) -> Result<(), EtcdClientError> {
+    /// Delete by key
+    pub fn delete(&self, key: impl AsRef<[u8]>) -> Result<(), EtcdClientError> {
         let mut req = DeleteRangeRequest::new();
-        req.set_key(key);
+        req.set_key(key.as_ref().to_vec());
 
         let _resp = self
             .inner
@@ -106,19 +92,15 @@ impl SimpleKVClient {
         Ok(())
     }
 
-    /// Delete a key
-    #[inline]
-    pub fn delete(&self, key: &str) -> Result<(), EtcdClientError> {
-        self.delete_bytes_key(key.as_bytes().to_vec())
-    }
-
     /// Get bytes with prefix
-    pub fn get_with_prefix(&self, prefix: &str) -> Result<Vec<SimpleKV>, EtcdClientError> {
+    pub fn get_with_prefix(
+        &self,
+        prefix: impl AsRef<[u8]>,
+    ) -> Result<Vec<KeyValue>, EtcdClientError> {
         let mut req = RangeRequest::new();
-        let end = Self::build_prefix_end(prefix);
 
-        req.set_key(prefix.as_bytes().to_vec());
-        req.set_range_end(end);
+        req.set_key(prefix.as_ref().to_vec());
+        req.set_range_end(Self::build_prefix_end(prefix));
 
         let resp = self
             .inner
@@ -126,14 +108,7 @@ impl SimpleKVClient {
             .wait_drop_metadata()
             .map_err(EtcdClientError::GRPC)?;
 
-        let kvs = resp
-            .get_kvs()
-            .iter()
-            .map(|kv| SimpleKV {
-                key: String::from_utf8_lossy(kv.get_key()).to_string(),
-                value: kv.get_value().to_vec(),
-            })
-            .collect();
+        let kvs = resp.get_kvs().to_vec();
 
         Ok(kvs)
     }
@@ -173,20 +148,19 @@ impl SimpleKVClient {
             .and_then(|b| String::from_utf8(b).map_err(EtcdClientError::FromUtf8))
     }
 
-    fn build_prefix_end(prefix: &str) -> Vec<u8> {
+    fn build_prefix_end(prefix: impl AsRef<[u8]>) -> Vec<u8> {
         let no_prefix_end = Vec::new();
 
-        let b = prefix.as_bytes();
-        if b.is_empty() {
+        if prefix.as_ref().is_empty() {
             return no_prefix_end;
         }
 
-        let mut end = b.to_vec();
+        let mut end = prefix.as_ref().to_vec();
 
         for i in (0..end.len()).rev() {
             if end[i] < 0xff {
                 end[i] += 1;
-                return end[0..=1].to_vec();
+                return end[0..=i].to_vec();
             }
         }
 
