@@ -3,7 +3,6 @@
 use std::sync::Arc;
 
 use futures::Future;
-
 use grpc::ClientStub;
 
 pub use crate::pb::kv::KeyValue;
@@ -15,6 +14,7 @@ pub use crate::pb::rpc::{TxnRequest, TxnResponse};
 pub use crate::pb::rpc_grpc::{KVClient, KV as Service};
 
 use crate::client::EtcdClientError;
+use crate::client::RequestOptsBuilder;
 
 /// SimpleKV with String as key
 pub struct SimpleKV {
@@ -25,6 +25,7 @@ pub struct SimpleKV {
 /// KVClient which use String as key
 pub struct SimpleKVClient {
     inner: KVClient,
+    opts_builder: RequestOptsBuilder,
 }
 
 impl SimpleKVClient {
@@ -32,7 +33,12 @@ impl SimpleKVClient {
     pub fn new(client: Arc<grpc::Client>) -> SimpleKVClient {
         SimpleKVClient {
             inner: KVClient::with_client(client),
+            opts_builder: RequestOptsBuilder::new(),
         }
+    }
+
+    pub fn with_token(&mut self, token: impl AsRef<str>) {
+        self.opts_builder.with_token(token);
     }
 
     /// Get bytes by key
@@ -42,7 +48,7 @@ impl SimpleKVClient {
 
         let resp = self
             .inner
-            .range(grpc::RequestOptions::new(), req)
+            .range(self.opts_builder.build(), req)
             .wait_drop_metadata()
             .map_err(EtcdClientError::GRPC)?;
 
@@ -71,7 +77,7 @@ impl SimpleKVClient {
 
         let _resp = self
             .inner
-            .put(grpc::RequestOptions::new(), req)
+            .put(self.opts_builder.build(), req)
             .wait_drop_metadata()
             .map_err(EtcdClientError::GRPC)?;
 
@@ -85,7 +91,7 @@ impl SimpleKVClient {
 
         let _resp = self
             .inner
-            .delete_range(grpc::RequestOptions::new(), req)
+            .delete_range(self.opts_builder.build(), req)
             .wait_drop_metadata()
             .map_err(EtcdClientError::GRPC)?;
 
@@ -104,7 +110,7 @@ impl SimpleKVClient {
 
         let resp = self
             .inner
-            .range(grpc::RequestOptions::new(), req)
+            .range(self.opts_builder.build(), req)
             .wait_drop_metadata()
             .map_err(EtcdClientError::GRPC)?;
 
@@ -122,7 +128,7 @@ impl SimpleKVClient {
 
         let resp = self
             .inner
-            .range(grpc::RequestOptions::new(), req)
+            .range(self.opts_builder.build(), req)
             .wait_drop_metadata()
             .map_err(EtcdClientError::GRPC)?;
 
@@ -136,7 +142,7 @@ impl SimpleKVClient {
         req.set_key(key.as_bytes().to_vec());
 
         self.inner
-            .range(grpc::RequestOptions::new(), req)
+            .range(self.opts_builder.build(), req)
             .drop_metadata()
             .map_err(EtcdClientError::GRPC)
             .and_then(move |resp| {

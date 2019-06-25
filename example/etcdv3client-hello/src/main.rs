@@ -9,9 +9,18 @@ fn main() {
     let host: &str = "127.0.0.1";
     let port: u16 = 2379;
 
+    let user = "root";
+    let password = "123456";
+
     let etcd_client = EtcdV3Client::new(host, port).expect("can not connect etcd server");
 
-    let kv_client = etcd_client.new_simple_kv();
+    let auth_client = etcd_client.new_auth();
+
+    let token = auth_client.get_token(user, password).expect("auth can not get token");
+
+    let mut kv_client = etcd_client.new_simple_kv();
+
+    kv_client.with_token(token);
 
     match kv_client.get_string(key) {
         Ok(v) => {

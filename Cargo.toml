@@ -8,6 +8,7 @@ edition = "2018"
 gen = ["protobuf-codegen-pure"]
 
 [dependencies]
+bytes           = "0.4"
 grpc            = "0.6.1"
 protobuf        = { version = "2.6" }
 failure         = "0.1"
