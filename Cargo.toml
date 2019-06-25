@@ -8,15 +8,14 @@ edition = "2018"
 failure = "0.1"
 futures = "0.1"
 bytes = "0.4"
-env_logger = { version = "0.6", default-features = false }
+env_logger = "0.6"
 log = "0.4"
 http = "0.1"
+hyper = "0.12"
 prost = "0.5"
 tokio = "0.1"
-# tokio = { version = "0.1.19", features = ["async-await-preview"] }
 tower-request-modifier = { git = "https://github.com/tower-rs/tower-http" }
-tower-hyper = { git = "https://github.com/tower-rs/tower-hyper" }
-hyper = "0.12"
+tower-hyper = "0.1"
 tower-grpc = { git = "https://github.com/tower-rs/tower-grpc", features = ["tower-hyper"] }
 tower-service = "0.2"
 tower-util = "0.1"

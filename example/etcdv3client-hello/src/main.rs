@@ -1,6 +1,6 @@
 use futures::Future;
 
-use etcdv3client::SimpleKvClient;
+use etcdv3client::{SimpleKvClient, SimpleAuthClient};
 
 fn main() {
     env_logger::init();
@@ -12,7 +12,16 @@ fn main() {
     let host: &str = "127.0.0.1";
     let port: u16 = 2379;
 
-    let run = SimpleKvClient::new(host, port)
+    let name = "root";
+    let password = "123456";
+
+        let f = SimpleAuthClient::new(host, port)
+        .and_then(move |mut client| client.get_token(name, password).map(|resp| (client, resp)))
+        .and_then(move |(mut client, resp)| {
+            println!("resp=> {:?}", resp);
+
+            SimpleKvClient::new(host, port, Some(resp))
+        })
         .and_then(move |mut client| client.get_string(key.clone()).map(|resp| (client, resp)))
         .and_then(move |(mut client, resp)| {
             println!("resp=> {:?}", resp);
@@ -21,11 +30,12 @@ fn main() {
         })
         .and_then(|kvs| {
             for kv in kvs {
-                println!("{} => {:?}", kv.key, String::from_utf8_lossy(&kv.value))
+                println!("{} => {:?}", String::from_utf8_lossy(&kv.key), String::from_utf8_lossy(&kv.value))
             }
             Ok(())
         })
         .map_err(|e| println!("ERR = {:?}", e));
 
-    tokio::run(run);
+
+    tokio::run(f);
 }

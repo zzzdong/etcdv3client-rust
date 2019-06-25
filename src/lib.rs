@@ -1,12 +1,9 @@
-pub mod comm;
+pub mod auth;
+mod conn;
+pub mod error;
 pub mod kv;
+pub mod pb;
 
-pub use comm::EtcdClientError;
-pub use kv::{SimpleKV, SimpleKvClient};
-
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+pub use auth::SimpleAuthClient;
+pub use error::EtcdClientError;
+pub use kv::SimpleKvClient;
