@@ -6,7 +6,7 @@ pub use crate::pb::kv::KeyValue;
 pub use crate::pb::rpc::{AuthenticateRequest, AuthenticateResponse};
 pub use crate::pb::rpc_grpc::{Auth as Service, AuthClient};
 
-use crate::client::EtcdClientError;
+use crate::error::EtcdClientError;
 
 pub struct SimpleAuthClient {
     inner: AuthClient,

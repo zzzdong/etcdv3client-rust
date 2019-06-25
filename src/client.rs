@@ -1,25 +1,12 @@
 // client.rs
 
-use std::string::FromUtf8Error;
 use std::sync::Arc;
 
 use bytes::Bytes;
-use failure::Fail;
 
 use crate::auth::SimpleAuthClient;
+use crate::error::EtcdClientError;
 use crate::kv::SimpleKVClient;
-
-#[derive(Debug, Fail)]
-pub enum EtcdClientError {
-    #[fail(display = "grpc error: {}", _0)]
-    GRPC(grpc::Error),
-    #[fail(display = "from utf8 error: {}", _0)]
-    FromUtf8(FromUtf8Error),
-    #[fail(display = "key not found")]
-    KeyNotFound,
-    #[fail(display = "auth failed")]
-    AuthFailed,
-}
 
 pub struct EtcdV3Client {
     conn: Arc<grpc::Client>,

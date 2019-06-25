@@ -1,14 +1,10 @@
-pub mod auth;
-pub mod client;
-pub mod kv;
-pub mod pb;
+mod auth;
+mod client;
+mod error;
+mod kv;
+mod pb;
 
-pub use client::*;
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+pub use auth::SimpleAuthClient;
+pub use client::EtcdV3Client;
+pub use error::EtcdClientError;
+pub use kv::SimpleKVClient;

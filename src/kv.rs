@@ -13,14 +13,8 @@ pub use crate::pb::rpc::{RangeRequest, RangeResponse};
 pub use crate::pb::rpc::{TxnRequest, TxnResponse};
 pub use crate::pb::rpc_grpc::{KVClient, KV as Service};
 
-use crate::client::EtcdClientError;
 use crate::client::RequestOptsBuilder;
-
-/// SimpleKV with String as key
-pub struct SimpleKV {
-    pub key: String,
-    pub value: Vec<u8>,
-}
+use crate::error::EtcdClientError;
 
 /// KVClient which use String as key
 pub struct SimpleKVClient {
