@@ -7,4 +7,4 @@ mod pb;
 pub use auth::SimpleAuthClient;
 pub use client::EtcdV3Client;
 pub use error::EtcdClientError;
-pub use kv::SimpleKVClient;
+pub use kv::{SimpleKVClient, KeyValue};
