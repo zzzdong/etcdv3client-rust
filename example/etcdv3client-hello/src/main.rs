@@ -1,41 +1,46 @@
-use futures::Future;
+use etcdv3client::{EtcdClientError, SimpleAuthClient, SimpleKvClient};
 
-use etcdv3client::{SimpleKvClient, SimpleAuthClient};
-
-fn main() {
+#[tokio::main]
+async fn main() -> Result<(), EtcdClientError> {
     env_logger::init();
 
     let key = "hello";
     let prefix = "hello";
     let value = "world";
 
-    let host: &str = "127.0.0.1";
-    let port: u16 = 2379;
+    let endpoint = "http://localhost:2379";
 
     let name = "root";
     let password = "123456";
 
-        let f = SimpleAuthClient::new(host, port)
-        .and_then(move |mut client| client.get_token(name, password).map(|resp| (client, resp)))
-        .and_then(move |(mut client, resp)| {
-            println!("resp=> {:?}", resp);
+    let mut client = SimpleAuthClient::new(vec![endpoint], None).await?;
 
-            SimpleKvClient::new(host, port, Some(resp))
-        })
-        .and_then(move |mut client| client.get_string(key.clone()).map(|resp| (client, resp)))
-        .and_then(move |(mut client, resp)| {
-            println!("resp=> {:?}", resp);
+    let token = client.get_token(name, password).await?;
+    println!("token=> {:?}", token);
 
-            client.get_with_prefix(prefix)
-        })
-        .and_then(|kvs| {
-            for kv in kvs {
-                println!("{} => {:?}", String::from_utf8_lossy(&kv.key), String::from_utf8_lossy(&kv.value))
-            }
-            Ok(())
-        })
-        .map_err(|e| println!("ERR = {:?}", e));
+    let mut client = SimpleKvClient::new(vec![endpoint], Some(&token)).await?;
 
+    match client.get_string(key.clone()).await {
+        Ok(resp) => {
+            println!("get `{}`: {}", key, resp);
+        }
+        Err(EtcdClientError::KeyNotFound) => {
+            client.put(key.clone(), value.clone()).await?;
+        }
+        Err(_) => {
+            return Err(EtcdClientError::ErrMsg("get_string failed".to_string()));
+        }
+    }
 
-    tokio::run(f);
+    let kvs = client.get_with_prefix(prefix).await?;
+
+    for kv in kvs {
+        println!(
+            "{} => {:?}",
+            String::from_utf8_lossy(&kv.key),
+            String::from_utf8_lossy(&kv.value)
+        )
+    }
+
+    Ok(())
 }

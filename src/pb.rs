@@ -1,13 +1,11 @@
-// comm.rs
-
 pub mod mvccpb {
-    include!(concat!(env!("OUT_DIR"), "/mvccpb.rs"));
+    tonic::include_proto!("mvccpb");
 }
 
 pub mod authpb {
-    include!(concat!(env!("OUT_DIR"), "/authpb.rs"));
+    tonic::include_proto!("authpb");
 }
 
 pub mod etcdserverpb {
-    include!(concat!(env!("OUT_DIR"), "/etcdserverpb.rs"));
+    tonic::include_proto!("etcdserverpb");
 }

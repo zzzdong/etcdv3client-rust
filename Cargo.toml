@@ -1,24 +1,19 @@
 [package]
 name = "etcdv3client"
 version = "0.1.0"
-authors = ["Mo"]
+authors = ["zzzdong <kuwater@163.com>"]
 edition = "2018"
 
 [dependencies]
 failure = "0.1"
-futures = "0.1"
+tonic = { version = "0.1.0-alpha.1", features = ["rustls"] }
 bytes = "0.4"
-env_logger = "0.6"
-log = "0.4"
-http = "0.1"
-hyper = "0.12"
 prost = "0.5"
-tokio = "0.1"
-tower-request-modifier = { git = "https://github.com/tower-rs/tower-http" }
-tower-hyper = "0.1"
-tower-grpc = { git = "https://github.com/tower-rs/tower-grpc", features = ["tower-hyper"] }
-tower-service = "0.2"
-tower-util = "0.1"
+tokio = "=0.2.0-alpha.6"
+futures-preview = { version = "=0.3.0-alpha.19", default-features = false, features = ["alloc"]}
+async-stream = "0.1.2"
+http = "0.1"
+tower = "=0.3.0-alpha.2"
 
 [build-dependencies]
-tower-grpc-build = { git = "https://github.com/tower-rs/tower-grpc", features = ["tower-hyper"] }
+tonic-build = "0.1.0-alpha.1"

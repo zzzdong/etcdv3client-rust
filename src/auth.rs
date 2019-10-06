@@ -1,37 +1,40 @@
-use futures::Future;
-use tower_grpc::Request;
+// auth client
+#![allow(dead_code)]
 
-use crate::pb::etcdserverpb::client::Auth;
+use tonic::Request;
+
+use crate::error::EtcdClientError;
+use crate::pb::etcdserverpb::client::AuthClient;
 use crate::pb::etcdserverpb::AuthenticateRequest;
 
-use crate::conn::{ConnBuilder, HTTPConn};
-use crate::error::EtcdClientError;
-
 pub struct SimpleAuthClient {
-    inner: Auth<HTTPConn>,
+    inner: AuthClient<tonic::transport::channel::Channel>,
 }
 
 impl SimpleAuthClient {
-    pub fn new(
-        ip: &str,
-        port: u16,
-    ) -> impl Future<Item = SimpleAuthClient, Error = EtcdClientError> {
-        ConnBuilder::new(ip, port).build().map(|c| SimpleAuthClient {
-            inner: Auth::new(c),
-        })
+    pub async fn new(
+        endpoints: Vec<impl AsRef<str>>,
+        token: Option<&str>,
+    ) -> Result<SimpleAuthClient, EtcdClientError> {
+        let channel = crate::conn::new_channel(endpoints, token)?;
+
+        let client = AuthClient::new(channel);
+        Ok(SimpleAuthClient { inner: client })
     }
 
-    pub fn get_token(
+    pub async fn get_token(
         &mut self,
         name: impl AsRef<str>,
         password: impl AsRef<str>,
-    ) -> impl Future<Item = String, Error = EtcdClientError> {
-        self.inner
+    ) -> Result<String, EtcdClientError> {
+        let resp = self
+            .inner
             .authenticate(Request::new(AuthenticateRequest {
                 name: name.as_ref().to_owned(),
                 password: password.as_ref().to_owned(),
             }))
-            .map_err(EtcdClientError::GRPCRequest)
-            .and_then(|resp| Ok(resp.into_inner().token))
+            .await?;
+
+        Ok(resp.into_inner().token)
     }
 }
