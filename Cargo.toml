@@ -5,15 +5,13 @@ authors = ["zzzdong <kuwater@163.com>"]
 edition = "2018"
 
 [dependencies]
-failure = "0.1"
-tonic = { version = "0.1.0-alpha.1", features = ["rustls"] }
 bytes = "0.4"
-prost = "0.5"
-tokio = "=0.2.0-alpha.6"
+failure = "0.1"
 futures-preview = { version = "=0.3.0-alpha.19", default-features = false, features = ["alloc"]}
-async-stream = "0.1.2"
 http = "0.1"
-tower = "=0.3.0-alpha.2"
+prost = "0.5"
+tonic = { version = "0.1.0-alpha.2", features = ["rustls"] }
+tokio = "=0.2.0-alpha.6"
 
 [build-dependencies]
-tonic-build = "0.1.0-alpha.1"
+tonic-build = "0.1.0-alpha.2"

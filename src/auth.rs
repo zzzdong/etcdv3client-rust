@@ -14,7 +14,7 @@ pub struct SimpleAuthClient {
 impl SimpleAuthClient {
     pub async fn new(
         endpoints: Vec<impl AsRef<str>>,
-        token: Option<&str>,
+        token: Option<impl AsRef<str>>,
     ) -> Result<SimpleAuthClient, EtcdClientError> {
         let channel = crate::conn::new_channel(endpoints, token)?;
 

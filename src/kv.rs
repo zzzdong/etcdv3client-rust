@@ -14,7 +14,7 @@ pub struct SimpleKvClient {
 impl SimpleKvClient {
     pub async fn new(
         endpoints: Vec<impl AsRef<str>>,
-        token: Option<&str>,
+        token: Option<impl AsRef<str>>,
     ) -> Result<SimpleKvClient, EtcdClientError> {
         let channel = crate::conn::new_channel(endpoints, token)?;
 

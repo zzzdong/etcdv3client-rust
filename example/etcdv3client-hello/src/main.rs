@@ -13,12 +13,14 @@ async fn main() -> Result<(), EtcdClientError> {
     let name = "root";
     let password = "123456";
 
-    let mut client = SimpleAuthClient::new(vec![endpoint], None).await?;
+    let token: Option<String> = None;
+
+    let mut client = SimpleAuthClient::new(vec![endpoint], token).await?;
 
     let token = client.get_token(name, password).await?;
     println!("token=> {:?}", token);
 
-    let mut client = SimpleKvClient::new(vec![endpoint], Some(&token)).await?;
+    let mut client = SimpleKvClient::new(vec![endpoint], Some(token)).await?;
 
     match client.get_string(key.clone()).await {
         Ok(resp) => {

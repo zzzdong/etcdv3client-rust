@@ -1,8 +1,8 @@
-use http::header;
-use http::uri;
 use std::string::FromUtf8Error;
 
 use failure::Fail;
+use http::header;
+use http::uri;
 
 #[derive(Debug, Fail)]
 pub enum EtcdClientError {
