@@ -3,6 +3,16 @@ name = "etcdv3client"
 version = "0.1.0-alpha.1"
 authors = ["zzzdong <kuwater@163.com>"]
 edition = "2018"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/zzzdong/etcdv3client-rust"
+homepage = "https://github.com/zzzdong/etcdv3client-rust"
+documentation = "https://docs.rs/etcdv3client/"
+description = """
+a simple etcdv3 client
+"""
+categories = ["asynchronous", "network-programming"]
+keywords = ["etcd", "async"]
 
 [dependencies]
 bytes = "0.4"
