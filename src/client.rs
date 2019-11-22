@@ -1,9 +1,9 @@
-use crate::error::EtcdClientError;
-use crate::pb::etcdserverpb::client::*;
+use crate::error::{EtcdClientError, WatchError};
+use crate::pb::client::*;
+use crate::pb::*;
+use crate::watcher::Watcher;
 
-use crate::pb::etcdserverpb::*;
-use crate::KeyValue;
-
+use tokio::sync::mpsc;
 use tonic::transport::channel::Channel;
 
 pub struct EtcdClient {
@@ -19,11 +19,11 @@ impl EtcdClient {
     /// Create a new EtcdClient
     pub async fn new(
         endpoints: Vec<impl AsRef<str>>,
-        cred: Option<(String, String)>,
+        auth: Option<(String, String)>,
     ) -> Result<Self, EtcdClientError> {
         let mut token = None;
 
-        if let Some((name, password)) = cred {
+        if let Some((name, password)) = auth {
             for endpoint in &endpoints {
                 if let Ok(t) = get_token(endpoint, &name, &password).await {
                     token = Some(t);
@@ -65,6 +65,7 @@ impl EtcdClient {
         String::from_utf8(value).map_err(EtcdClientError::from)
     }
 
+    /// get key-value paire with prefix
     pub async fn get_prefix(
         &mut self,
         key: impl AsRef<[u8]>,
@@ -149,6 +150,53 @@ impl EtcdClient {
         let resp = self.auth.authenticate(req).await?.into_inner();
 
         Ok(resp.token)
+    }
+
+    /// watch a key
+    pub async fn watch(&mut self, key: impl AsRef<[u8]>) -> Result<Watcher, EtcdClientError> {
+        let req = WatchCreateRequest {
+            key: key.as_ref().to_vec(),
+            ..Default::default()
+        };
+
+        self.inner_watch(req).await
+    }
+
+    /// watch a key with prefix
+    pub async fn watch_prefix(
+        &mut self,
+        key: impl AsRef<[u8]>,
+    ) -> Result<Watcher, EtcdClientError> {
+        let req = WatchCreateRequest {
+            key: key.as_ref().to_vec(),
+            ..Default::default()
+        };
+
+        self.inner_watch(req).await
+    }
+
+    async fn inner_watch(&mut self, req: WatchCreateRequest) -> Result<Watcher, EtcdClientError> {
+        let (mut req_tx, req_rx) = mpsc::unbounded_channel::<WatchRequest>();
+
+        let create_watch = watch_request::RequestUnion::CreateRequest(req);
+        let create_req = WatchRequest {
+            request_union: Some(create_watch),
+        };
+
+        req_tx.try_send(create_req).map_err(WatchError::from)?;
+
+        let resp = self.watch.watch(req_rx).await?;
+        let mut inbound = resp.into_inner();
+        let watch_id;
+
+        match inbound.message().await? {
+            Some(msg) => watch_id = msg.watch_id,
+            None => return Err(EtcdClientError::from(WatchError::StartWatchError)),
+        }
+
+        let watcher = Watcher::new(watch_id, req_tx, inbound);
+
+        Ok(watcher)
     }
 }
 

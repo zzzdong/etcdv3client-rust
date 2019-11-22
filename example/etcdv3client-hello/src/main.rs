@@ -1,22 +1,16 @@
-use etcdv3client::{EtcdClient, EtcdClientError, KeyValue, RangeRequest};
+use etcdv3client::{pb::RangeRequest, EtcdClient, EtcdClientError};
 
 #[tokio::main]
 async fn main() -> Result<(), EtcdClientError> {
     env_logger::init();
 
     let key = "hello";
-    let prefix = "hello";
     let value = "world";
 
     let endpoint = "http://localhost:2379";
+    let auth: Option<(String, String)> = None;
 
-    let name = "root";
-    let password = "123456";
-
-    let cred: Option<(String, String)> = None;
-    
-
-    let mut client = EtcdClient::new(vec![endpoint], cred).await?;
+    let mut client = EtcdClient::new(vec![endpoint], auth).await?;
 
     match client.get(&key).await {
         Ok(v) => {
@@ -31,15 +25,32 @@ async fn main() -> Result<(), EtcdClientError> {
     }
 
     let req = RangeRequest {
-                key: key.as_bytes().to_vec(),
-                ..Default::default()
-            };
+        key: key.as_bytes().to_vec(),
+        ..Default::default()
+    };
     let resp = client.kv.range(req).await?;
 
     println!("got resp => {:?}", resp);
 
-    
+    let mut watcher = client.watch(key).await?;
 
+    tokio::spawn(async move {
+        for i in 0..5 {
+            let v = format!("{}-{}", value, i);
+            client.put(key, &v).await.unwrap();
+
+            println!("[{}] put {} done", i, v);
+        }
+    });
+
+    let mut n: i32 = 0;
+    while let Some(w) = watcher.message().await.unwrap() {
+        println!("[{}] got watch => {:?}", n, w);
+        if n > 2 {
+            watcher.cancel().await.unwrap();
+        }
+        n += 1;
+    }
 
     Ok(())
 }
