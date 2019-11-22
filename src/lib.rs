@@ -1,9 +1,9 @@
 mod client;
 mod conn;
 mod error;
-mod pb;
+pub mod pb;
+mod watcher;
 
 pub use client::EtcdClient;
-pub use error::EtcdClientError;
-pub use pb::etcdserverpb::*;
-pub use pb::mvccpb::KeyValue;
+pub use error::{EtcdClientError, WatchError};
+pub use watcher::Watcher;

@@ -3,6 +3,9 @@ use std::string::FromUtf8Error;
 use http::header;
 use http::uri;
 use thiserror::Error;
+use tokio::sync::mpsc::error::UnboundedTrySendError;
+
+use crate::pb::WatchRequest;
 
 #[derive(Error, Debug)]
 pub enum EtcdClientError {
@@ -22,4 +25,18 @@ pub enum EtcdClientError {
     KeyNotFound,
     #[error("endpoint error")]
     EndpointError,
+    #[error("watch error")]
+    WatchError(#[from] WatchError),
+}
+
+#[derive(Error, Debug)]
+pub enum WatchError {
+    #[error("watch request error")]
+    WatchRequestError(#[from] UnboundedTrySendError<WatchRequest>),
+    #[error("start watch failed")]
+    StartWatchError,
+    #[error("watch canceled")]
+    WatchCanceled,
+    #[error("watch finished")]
+    WatchFinished,
 }
