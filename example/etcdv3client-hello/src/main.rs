@@ -1,52 +1,45 @@
-use etcdv3client::{EtcdClientError, EtcdV3Client};
+use etcdv3client::{EtcdClient, EtcdClientError, KeyValue, RangeRequest};
 
-fn main() {
+#[tokio::main]
+async fn main() -> Result<(), EtcdClientError> {
     env_logger::init();
 
     let key = "hello";
+    let prefix = "hello";
     let value = "world";
 
-    let host: &str = "127.0.0.1";
-    let port: u16 = 2379;
+    let endpoint = "http://localhost:2379";
 
-    let user = "root";
+    let name = "root";
     let password = "123456";
 
-    let etcd_client = EtcdV3Client::new(host, port).expect("can not connect etcd server");
+    let cred: Option<(String, String)> = None;
+    
 
-    let auth_client = etcd_client.new_auth();
+    let mut client = EtcdClient::new(vec![endpoint], cred).await?;
 
-    let token = auth_client.get_token(user, password).expect("auth can not get token");
-
-    let mut kv_client = etcd_client.new_simple_kv();
-
-    kv_client.with_token(token);
-
-    match kv_client.get_string(key) {
+    match client.get(&key).await {
         Ok(v) => {
-            println!("got {}: {}", key, v);
-            let value = format!("{}+", v);
-            kv_client.put(key, &value).expect("put failed");
-            println!("put new: {}", value);
+            println!("got {} => {:?}", key, String::from_utf8_lossy(&v));
         }
         Err(EtcdClientError::KeyNotFound) => {
-            println!("cannot find `{}`", key);
-            println!("try to put {} with {}", key, value);
-            kv_client.put(key, value).expect("put failed");
+            client.put(key, value).await.unwrap();
         }
         Err(e) => {
-            println!("etcd get failed, {:?}", e);
+            return Err(e);
         }
     }
 
-    let kvs = kv_client
-        .get_with_prefix("h")
-        .expect("get_with_prefix failed");
-    // let kvs = kv_client.get_all().expect("get_all failed");
+    let req = RangeRequest {
+                key: key.as_bytes().to_vec(),
+                ..Default::default()
+            };
+    let resp = client.kv.range(req).await?;
 
-    println!("{:?}", kvs);
+    println!("got resp => {:?}", resp);
 
-    // for kv in &kvs {
-    //     println!("{:?}", kv);
-    // }
+    
+
+
+    Ok(())
 }

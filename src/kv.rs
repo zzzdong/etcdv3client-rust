@@ -1,151 +1,105 @@
 // kv client
+#![allow(dead_code)]
 
-use std::sync::Arc;
+use tonic::Request;
 
-use futures::Future;
-use grpc::ClientStub;
-
-pub use crate::pb::kv::KeyValue;
-pub use crate::pb::rpc::{CompactionRequest, CompactionResponse};
-pub use crate::pb::rpc::{DeleteRangeRequest, DeleteRangeResponse};
-pub use crate::pb::rpc::{PutRequest, PutResponse};
-pub use crate::pb::rpc::{RangeRequest, RangeResponse};
-pub use crate::pb::rpc::{TxnRequest, TxnResponse};
-pub use crate::pb::rpc_grpc::{KVClient, KV as Service};
-
-use crate::client::RequestOptsBuilder;
 use crate::error::EtcdClientError;
+use crate::pb::etcdserverpb::{client::KvClient, DeleteRangeRequest, PutRequest, RangeRequest};
+use crate::pb::mvccpb::KeyValue;
 
-/// KVClient which use String as key
-pub struct SimpleKVClient {
-    inner: KVClient,
-    opts_builder: RequestOptsBuilder,
+pub struct SimpleKvClient {
+    inner: KvClient<tonic::transport::channel::Channel>,
 }
 
-impl SimpleKVClient {
-    /// Reture a SimpleKVClient
-    pub fn new(client: Arc<grpc::Client>) -> SimpleKVClient {
-        SimpleKVClient {
-            inner: KVClient::with_client(client),
-            opts_builder: RequestOptsBuilder::new(),
-        }
+impl SimpleKvClient {
+    pub async fn new(
+        endpoints: Vec<impl AsRef<str>>,
+        token: Option<impl AsRef<str>>,
+    ) -> Result<SimpleKvClient, EtcdClientError> {
+        let channel = crate::conn::new_channel(endpoints, token)?;
+
+        let client = KvClient::new(channel);
+        Ok(SimpleKvClient { inner: client })
     }
 
-    pub fn with_token(&mut self, token: impl AsRef<str>) {
-        self.opts_builder.with_token(token);
-    }
-
-    /// Get bytes by key
-    pub fn get(&self, key: impl AsRef<[u8]>) -> Result<Vec<u8>, EtcdClientError> {
-        let mut req = RangeRequest::new();
-        req.set_key(key.as_ref().to_vec());
-
+    pub async fn get(&mut self, key: impl AsRef<[u8]>) -> Result<Vec<u8>, EtcdClientError> {
         let resp = self
             .inner
-            .range(self.opts_builder.build(), req)
-            .wait_drop_metadata()
-            .map_err(EtcdClientError::GRPC)?;
+            .range(Request::new(RangeRequest {
+                key: key.as_ref().to_vec(),
+                ..Default::default()
+            }))
+            .await?;
 
-        resp.get_kvs()
+        resp.into_inner()
+            .kvs
             .first()
-            .map(|kv| kv.get_value().to_vec())
+            .map(|kv| kv.value.to_vec())
             .ok_or_else(|| EtcdClientError::KeyNotFound)
     }
 
-    /// Get String by key
     #[inline]
-    pub fn get_string(&self, key: impl AsRef<[u8]>) -> Result<String, EtcdClientError> {
-        self.get(key)
-            .and_then(|e| String::from_utf8(e).map_err(EtcdClientError::FromUtf8))
+    pub async fn get_string(&mut self, key: impl AsRef<[u8]>) -> Result<String, EtcdClientError> {
+        let resp = self.get(key).await?;
+
+        String::from_utf8(resp).map_err(EtcdClientError::FromUtf8)
     }
 
-    /// Put bytes with key
-    pub fn put(
-        &self,
+    pub async fn get_with_prefix(
+        &mut self,
+        prefix: impl AsRef<[u8]>,
+    ) -> Result<Vec<KeyValue>, EtcdClientError> {
+        let resp = self
+            .inner
+            .range(Request::new(RangeRequest {
+                key: prefix.as_ref().to_vec(),
+                range_end: SimpleKvClient::build_prefix_end(prefix),
+                ..Default::default()
+            }))
+            .await?;
+
+        Ok(resp.into_inner().kvs)
+    }
+
+    pub async fn all(&mut self) -> Result<Vec<KeyValue>, EtcdClientError> {
+        let resp = self
+            .inner
+            .range(Request::new(RangeRequest {
+                key: vec![0x00],
+                range_end: vec![0x00],
+                ..Default::default()
+            }))
+            .await?;
+
+        Ok(resp.into_inner().kvs.iter().map(|kv| kv.clone()).collect())
+    }
+
+    pub async fn put(
+        &mut self,
         key: impl AsRef<[u8]>,
         value: impl AsRef<[u8]>,
     ) -> Result<(), EtcdClientError> {
-        let mut req = PutRequest::new();
-        req.set_key(key.as_ref().to_vec());
-        req.set_value(value.as_ref().to_vec());
-
         let _resp = self
             .inner
-            .put(self.opts_builder.build(), req)
-            .wait_drop_metadata()
-            .map_err(EtcdClientError::GRPC)?;
-
+            .put(Request::new(PutRequest {
+                key: key.as_ref().to_vec(),
+                value: value.as_ref().to_vec(),
+                ..Default::default()
+            }))
+            .await?;
         Ok(())
     }
 
-    /// Delete by key
-    pub fn delete(&self, key: impl AsRef<[u8]>) -> Result<(), EtcdClientError> {
-        let mut req = DeleteRangeRequest::new();
-        req.set_key(key.as_ref().to_vec());
-
+    pub async fn delete(&mut self, key: impl AsRef<[u8]>) -> Result<(), EtcdClientError> {
         let _resp = self
             .inner
-            .delete_range(self.opts_builder.build(), req)
-            .wait_drop_metadata()
-            .map_err(EtcdClientError::GRPC)?;
+            .delete_range(Request::new(DeleteRangeRequest {
+                key: key.as_ref().to_vec(),
+                ..Default::default()
+            }))
+            .await?;
 
         Ok(())
-    }
-
-    /// Get bytes with prefix
-    pub fn get_with_prefix(
-        &self,
-        prefix: impl AsRef<[u8]>,
-    ) -> Result<Vec<KeyValue>, EtcdClientError> {
-        let mut req = RangeRequest::new();
-
-        req.set_key(prefix.as_ref().to_vec());
-        req.set_range_end(Self::build_prefix_end(prefix));
-
-        let resp = self
-            .inner
-            .range(self.opts_builder.build(), req)
-            .wait_drop_metadata()
-            .map_err(EtcdClientError::GRPC)?;
-
-        let kvs = resp.get_kvs().to_vec();
-
-        Ok(kvs)
-    }
-
-    /// Get all keyvalue
-    pub fn get_all(&self) -> Result<Vec<KeyValue>, EtcdClientError> {
-        let mut req = RangeRequest::new();
-
-        req.set_key(vec![0x00]);
-        req.set_range_end(vec![0x00]);
-
-        let resp = self
-            .inner
-            .range(self.opts_builder.build(), req)
-            .wait_drop_metadata()
-            .map_err(EtcdClientError::GRPC)?;
-
-        let kvs = resp.get_kvs().to_vec();
-
-        Ok(kvs)
-    }
-
-    pub fn get_str(&self, key: &str) -> impl Future<Item = String, Error = EtcdClientError> {
-        let mut req = RangeRequest::new();
-        req.set_key(key.as_bytes().to_vec());
-
-        self.inner
-            .range(self.opts_builder.build(), req)
-            .drop_metadata()
-            .map_err(EtcdClientError::GRPC)
-            .and_then(move |resp| {
-                resp.get_kvs()
-                    .first()
-                    .map(|kv| kv.get_value().to_vec())
-                    .ok_or_else(|| EtcdClientError::KeyNotFound)
-            })
-            .and_then(|b| String::from_utf8(b).map_err(EtcdClientError::FromUtf8))
     }
 
     fn build_prefix_end(prefix: impl AsRef<[u8]>) -> Vec<u8> {

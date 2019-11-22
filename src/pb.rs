@@ -1,6 +1,11 @@
-// pb.rs
+pub mod mvccpb {
+    tonic::include_proto!("mvccpb");
+}
 
-pub mod auth;
-pub mod kv;
-pub mod rpc;
-pub mod rpc_grpc;
+pub mod authpb {
+    tonic::include_proto!("authpb");
+}
+
+pub mod etcdserverpb {
+    tonic::include_proto!("etcdserverpb");
+}

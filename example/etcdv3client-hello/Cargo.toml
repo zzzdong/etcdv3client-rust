@@ -7,9 +7,7 @@ edition = "2018"
 [dependencies]
 log = "0.4"
 env_logger = "0.6"
-# etcdv3client = {path="../../"}
-
+tokio = "=0.2.0-alpha.6"
 
 [dependencies.etcdv3client]
 path = "../../"
-features = ["gen"]

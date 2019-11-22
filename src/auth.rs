@@ -1,36 +1,40 @@
-use std::sync::Arc;
+// auth client
+#![allow(dead_code)]
 
-use grpc::ClientStub;
-
-pub use crate::pb::kv::KeyValue;
-pub use crate::pb::rpc::{AuthenticateRequest, AuthenticateResponse};
-pub use crate::pb::rpc_grpc::{Auth as Service, AuthClient};
+use tonic::Request;
 
 use crate::error::EtcdClientError;
+use crate::pb::etcdserverpb::client::AuthClient;
+use crate::pb::etcdserverpb::AuthenticateRequest;
 
 pub struct SimpleAuthClient {
-    inner: AuthClient,
+    inner: AuthClient<tonic::transport::channel::Channel>,
 }
 
 impl SimpleAuthClient {
-    /// Reture a SimpleAuthClient
-    pub fn new(client: Arc<grpc::Client>) -> SimpleAuthClient {
-        SimpleAuthClient {
-            inner: AuthClient::with_client(client),
-        }
+    pub async fn new(
+        endpoints: Vec<impl AsRef<str>>,
+        token: Option<impl AsRef<str>>,
+    ) -> Result<SimpleAuthClient, EtcdClientError> {
+        let channel = crate::conn::new_channel(endpoints, token)?;
+
+        let client = AuthClient::new(channel);
+        Ok(SimpleAuthClient { inner: client })
     }
 
-    pub fn get_token(&self, name: &str, password: &str) -> Result<String, EtcdClientError> {
-        let mut req = AuthenticateRequest::new();
-        req.set_name(name.to_string());
-        req.set_password(password.to_string());
-
+    pub async fn get_token(
+        &mut self,
+        name: impl AsRef<str>,
+        password: impl AsRef<str>,
+    ) -> Result<String, EtcdClientError> {
         let resp = self
             .inner
-            .authenticate(grpc::RequestOptions::new(), req)
-            .wait_drop_metadata()
-            .map_err(EtcdClientError::GRPC)?;
+            .authenticate(Request::new(AuthenticateRequest {
+                name: name.as_ref().to_owned(),
+                password: password.as_ref().to_owned(),
+            }))
+            .await?;
 
-        Ok(resp.get_token().to_string())
+        Ok(resp.into_inner().token)
     }
 }

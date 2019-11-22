@@ -1,15 +1,25 @@
 use std::string::FromUtf8Error;
 
-use failure::Fail;
+use http::header;
+use http::uri;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Error, Debug)]
 pub enum EtcdClientError {
-    #[fail(display = "grpc error: {}", _0)]
-    GRPC(grpc::Error),
-    #[fail(display = "from utf8 error: {}", _0)]
-    FromUtf8(FromUtf8Error),
-    #[fail(display = "key not found")]
+    #[error("uri invalid")]
+    Uri(#[from] uri::InvalidUri),
+    #[error("headervalue invalid")]
+    HeaderValue(#[from] header::InvalidHeaderValue),
+    #[error("from utf8 error")]
+    FromUtf8(#[from] FromUtf8Error),
+    #[error("GRPC request error")]
+    GRPCRequest(#[from] tonic::Status),
+    #[error("transport error")]
+    TransportError(#[from] tonic::transport::Error),
+    #[error("error message: {0}")]
+    ErrMsg(String),
+    #[error("key not found")]
     KeyNotFound,
-    #[fail(display = "auth failed")]
-    AuthFailed,
+    #[error("endpoint error")]
+    EndpointError,
 }
