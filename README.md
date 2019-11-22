@@ -5,6 +5,7 @@ NOTE: `etcdv3client` is currently early development, you should NOT use it in pr
 
 [![Crates.io](https://img.shields.io/crates/v/etcdv3client)](https://crates.io/crates/etcdv3client)
 [![Documentation](https://docs.rs/etcdv3client/badge.svg)](https://docs.rs/etcdv3client)
+[![Build Status](https://dev.azure.com/kuwater0658/etcdv3client-rust/_apis/build/status/zzzdong.etcdv3client-rust?branchName=master)](https://dev.azure.com/kuwater0658/etcdv3client-rust/_build/latest?definitionId=1&branchName=master)
 [![Crates.io](https://img.shields.io/crates/l/etcdv3client)](LICENSE)
 
 ## Overview
