@@ -1,39 +1,25 @@
 use std::string::FromUtf8Error;
 
-use failure::Fail;
 use http::header;
 use http::uri;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Error, Debug)]
 pub enum EtcdClientError {
-    #[fail(display = "uri error: {}", _0)]
-    Uri(uri::InvalidUri),
-    #[fail(display = "headervalue error: {}", _0)]
-    HeaderValue(header::InvalidHeaderValue),
-    #[fail(display = "from utf8 error: {}", _0)]
-    FromUtf8(FromUtf8Error),
-    #[fail(display = "error message: {}", _0)]
+    #[error("uri invalid")]
+    Uri(#[from] uri::InvalidUri),
+    #[error("headervalue invalid")]
+    HeaderValue(#[from] header::InvalidHeaderValue),
+    #[error("from utf8 error")]
+    FromUtf8(#[from] FromUtf8Error),
+    #[error("GRPC request error")]
+    GRPCRequest(#[from] tonic::Status),
+    #[error("transport error")]
+    TransportError(#[from] tonic::transport::Error),
+    #[error("error message: {0}")]
     ErrMsg(String),
-    #[fail(display = "GRPC request error: {:?}", _0)]
-    GRPCRequest(tonic::Status),
-    #[fail(display = "key not found")]
+    #[error("key not found")]
     KeyNotFound,
-}
-
-impl From<uri::InvalidUri> for EtcdClientError {
-    fn from(e: uri::InvalidUri) -> Self {
-        EtcdClientError::Uri(e)
-    }
-}
-
-impl From<header::InvalidHeaderValue> for EtcdClientError {
-    fn from(e: header::InvalidHeaderValue) -> Self {
-        EtcdClientError::HeaderValue(e)
-    }
-}
-
-impl From<tonic::Status> for EtcdClientError {
-    fn from(e: tonic::Status) -> Self {
-        EtcdClientError::GRPCRequest(e)
-    }
+    #[error("endpoint error")]
+    EndpointError,
 }

@@ -1,9 +1,9 @@
-pub mod auth;
+mod client;
 mod conn;
-pub mod error;
-pub mod kv;
-pub mod pb;
+mod error;
+mod pb;
 
-pub use auth::SimpleAuthClient;
+pub use client::EtcdClient;
 pub use error::EtcdClientError;
-pub use kv::SimpleKvClient;
+pub use pb::etcdserverpb::*;
+pub use pb::mvccpb::KeyValue;

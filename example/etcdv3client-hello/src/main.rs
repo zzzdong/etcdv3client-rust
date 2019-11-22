@@ -1,4 +1,4 @@
-use etcdv3client::{EtcdClientError, SimpleAuthClient, SimpleKvClient};
+use etcdv3client::{EtcdClient, EtcdClientError, KeyValue, RangeRequest};
 
 #[tokio::main]
 async fn main() -> Result<(), EtcdClientError> {
@@ -13,36 +13,33 @@ async fn main() -> Result<(), EtcdClientError> {
     let name = "root";
     let password = "123456";
 
-    let token: Option<String> = None;
+    let cred: Option<(String, String)> = None;
+    
 
-    let mut client = SimpleAuthClient::new(vec![endpoint], token).await?;
+    let mut client = EtcdClient::new(vec![endpoint], cred).await?;
 
-    let token = client.get_token(name, password).await?;
-    println!("token=> {:?}", token);
-
-    let mut client = SimpleKvClient::new(vec![endpoint], Some(token)).await?;
-
-    match client.get_string(key.clone()).await {
-        Ok(resp) => {
-            println!("get `{}`: {}", key, resp);
+    match client.get(&key).await {
+        Ok(v) => {
+            println!("got {} => {:?}", key, String::from_utf8_lossy(&v));
         }
         Err(EtcdClientError::KeyNotFound) => {
-            client.put(key.clone(), value.clone()).await?;
+            client.put(key, value).await.unwrap();
         }
-        Err(_) => {
-            return Err(EtcdClientError::ErrMsg("get_string failed".to_string()));
+        Err(e) => {
+            return Err(e);
         }
     }
 
-    let kvs = client.get_with_prefix(prefix).await?;
+    let req = RangeRequest {
+                key: key.as_bytes().to_vec(),
+                ..Default::default()
+            };
+    let resp = client.kv.range(req).await?;
 
-    for kv in kvs {
-        println!(
-            "{} => {:?}",
-            String::from_utf8_lossy(&kv.key),
-            String::from_utf8_lossy(&kv.value)
-        )
-    }
+    println!("got resp => {:?}", resp);
+
+    
+
 
     Ok(())
 }
