@@ -1,10 +1,16 @@
 use crate::error::{EtcdClientError, WatchError};
-use crate::pb::client::*;
 use crate::pb::*;
+use crate::pb::{
+    auth_client::AuthClient, cluster_client::ClusterClient, kv_client::KvClient,
+    lease_client::LeaseClient, maintenance_client::MaintenanceClient, watch_client::WatchClient,
+};
 use crate::watcher::Watcher;
 
 use tokio::sync::mpsc;
 use tonic::transport::channel::Channel;
+use tonic::{metadata::MetadataValue, Request};
+
+pub(crate) const TOKEN_ID: &str = "token";
 
 pub struct EtcdClient {
     pub kv: KvClient<Channel>,
@@ -32,15 +38,24 @@ impl EtcdClient {
             }
         }
 
-        let channel = crate::conn::new_channel(endpoints, token).await?;
+        let token = token.map(|t| MetadataValue::from_str(&t).unwrap());
+
+        let channel = crate::conn::new_channel(endpoints).await?;
+
+        let interceptor = move |mut req: Request<()>| {
+            if let Some(token) = token.clone() {
+                req.metadata_mut().insert(TOKEN_ID, token);
+            }
+            Ok(req)
+        };
 
         Ok(EtcdClient {
-            kv: KvClient::new(channel.clone()),
-            watch: WatchClient::new(channel.clone()),
-            lease: LeaseClient::new(channel.clone()),
-            cluster: ClusterClient::new(channel.clone()),
-            maintenance: MaintenanceClient::new(channel.clone()),
-            auth: AuthClient::new(channel.clone()),
+            kv: KvClient::with_interceptor(channel.clone(), interceptor.clone()),
+            watch: WatchClient::with_interceptor(channel.clone(), interceptor.clone()),
+            lease: LeaseClient::with_interceptor(channel.clone(), interceptor.clone()),
+            cluster: ClusterClient::with_interceptor(channel.clone(), interceptor.clone()),
+            maintenance: MaintenanceClient::with_interceptor(channel.clone(), interceptor.clone()),
+            auth: AuthClient::with_interceptor(channel, interceptor),
         })
     }
 
@@ -176,14 +191,14 @@ impl EtcdClient {
     }
 
     async fn inner_watch(&mut self, req: WatchCreateRequest) -> Result<Watcher, EtcdClientError> {
-        let (mut req_tx, req_rx) = mpsc::unbounded_channel::<WatchRequest>();
+        let (req_tx, req_rx) = mpsc::unbounded_channel::<WatchRequest>();
 
         let create_watch = watch_request::RequestUnion::CreateRequest(req);
         let create_req = WatchRequest {
             request_union: Some(create_watch),
         };
 
-        req_tx.try_send(create_req).map_err(WatchError::from)?;
+        req_tx.send(create_req).map_err(WatchError::from)?;
 
         let resp = self.watch.watch(req_rx).await?;
         let mut inbound = resp.into_inner();
@@ -224,7 +239,7 @@ async fn get_token(
     name: &str,
     password: &str,
 ) -> Result<String, EtcdClientError> {
-    let channel = crate::conn::new_channel(vec![endpoint], Option::<&str>::None).await?;
+    let channel = crate::conn::new_channel(vec![endpoint]).await?;
 
     let mut auth_client = AuthClient::new(channel);
 

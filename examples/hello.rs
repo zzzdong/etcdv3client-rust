@@ -2,8 +2,6 @@ use etcdv3client::{pb::RangeRequest, EtcdClient, EtcdClientError};
 
 #[tokio::main]
 async fn main() -> Result<(), EtcdClientError> {
-    env_logger::init();
-
     let key = "hello";
     let value = "world";
 
@@ -35,7 +33,7 @@ async fn main() -> Result<(), EtcdClientError> {
     let mut watcher = client.watch(key).await?;
 
     tokio::spawn(async move {
-        for i in 0..5 {
+        for i in 0..5u8 {
             let v = format!("{}-{}", value, i);
             client.put(key, &v).await.unwrap();
 

@@ -38,7 +38,7 @@ impl Watcher {
         };
 
         self.req_tx
-            .try_send(cancel_req)
+            .send(cancel_req)
             .map_err(WatchError::WatchRequestError)?;
 
         self.canceled = true;
@@ -48,13 +48,7 @@ impl Watcher {
 
     pub async fn message(&mut self) -> Result<Option<WatchResponse>, EtcdClientError> {
         match self.inbound.message().await? {
-            Some(resp) => {
-                if resp.canceled {
-                    Ok(None)
-                } else {
-                    Ok(Some(resp))
-                }
-            }
+            Some(resp) => Ok(Some(resp)),
             None => Ok(None),
         }
     }
