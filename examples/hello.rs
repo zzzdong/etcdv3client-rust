@@ -43,7 +43,13 @@ async fn main() -> Result<(), EtcdClientError> {
 
     let mut n: i32 = 0;
     while let Some(w) = watcher.message().await.unwrap() {
-        println!("[{}] got watch => {:?}", n, w);
+        println!("[{}] watch got => {:?}", n, w);
+
+        if w.canceled {
+            println!("watch cancaled, exit...");
+            break;
+        }
+
         if n > 2 {
             watcher.cancel().await.unwrap();
         }

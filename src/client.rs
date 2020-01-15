@@ -7,7 +7,7 @@ use crate::pb::{
 use crate::watcher::Watcher;
 
 use tokio::sync::mpsc;
-use tonic::transport::channel::Channel;
+use tonic::transport::{channel::Channel, Endpoint};
 use tonic::{metadata::MetadataValue, Request};
 
 pub(crate) const TOKEN_ID: &str = "token";
@@ -40,7 +40,7 @@ impl EtcdClient {
 
         let token = token.map(|t| MetadataValue::from_str(&t).unwrap());
 
-        let channel = crate::conn::new_channel(endpoints).await?;
+        let channel = new_channel(endpoints).await?;
 
         let interceptor = move |mut req: Request<()>| {
             if let Some(token) = token.clone() {
@@ -184,6 +184,7 @@ impl EtcdClient {
     ) -> Result<Watcher, EtcdClientError> {
         let req = WatchCreateRequest {
             key: key.as_ref().to_vec(),
+            range_end: build_prefix_end(key),
             ..Default::default()
         };
 
@@ -239,7 +240,7 @@ async fn get_token(
     name: &str,
     password: &str,
 ) -> Result<String, EtcdClientError> {
-    let channel = crate::conn::new_channel(vec![endpoint]).await?;
+    let channel = new_channel(vec![endpoint]).await?;
 
     let mut auth_client = AuthClient::new(channel);
 
@@ -251,4 +252,17 @@ async fn get_token(
     let resp = auth_client.authenticate(req).await?.into_inner();
 
     Ok(resp.token)
+}
+
+async fn new_channel(endpoints: Vec<impl AsRef<str>>) -> Result<Channel, EtcdClientError> {
+    let mut eps: Vec<Endpoint> = Vec::new();
+
+    for ep in endpoints {
+        eps.push(Channel::builder(ep.as_ref().parse()?));
+    }
+
+    match eps.len() {
+        0 => Err(EtcdClientError::ErrMsg("endpoint uri empty".to_string())),
+        _ => Ok(Channel::balance_list(eps.into_iter())),
+    }
 }

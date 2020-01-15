@@ -1,5 +1,4 @@
 mod client;
-mod conn;
 mod error;
 pub mod pb;
 mod watcher;
