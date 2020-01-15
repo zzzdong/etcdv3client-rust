@@ -1,13 +1,13 @@
 mod mvccpb {
-    tonic::include_proto!("mvccpb");
+    include!("mvccpb.rs");
 }
 
 mod authpb {
-    tonic::include_proto!("authpb");
+    include!("authpb.rs");
 }
 
 mod etcdserverpb {
-    tonic::include_proto!("etcdserverpb");
+    include!("etcdserverpb.rs");
 }
 
 pub use authpb::*;
