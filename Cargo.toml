@@ -1,6 +1,6 @@
 [package]
 name = "etcdv3client"
-version = "0.1.0-alpha.2"
+version = "0.1.0-beta.1"
 authors = ["zzzdong <kuwater@163.com>"]
 edition = "2018"
 license = "MIT"
@@ -15,14 +15,16 @@ categories = ["asynchronous", "network-programming"]
 keywords = ["etcd", "async"]
 
 [dependencies]
-bytes = "0.4"
-futures = "0.3"
-http = "0.1"
-prost = "0.5"
+http = "0.2"
+prost = "0.6"
 thiserror = "1.0"
-tonic = { version = "0.1.0-alpha.6", features = ["rustls"] }
-tokio = "=0.2.0-alpha.6"
+tonic = { version = "0.1", features = ["tls"] }
+tokio = { version = "0.2", features = ["default", "stream", "sync"] }
 
 
 [build-dependencies]
-tonic-build = "0.1.0-alpha.6"
+tonic-build = "0.1"
+
+
+[dev-dependencies]
+tokio = { version = "0.2", features = ["full"] }
