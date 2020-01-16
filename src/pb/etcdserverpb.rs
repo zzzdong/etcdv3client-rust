@@ -610,12 +610,18 @@ pub struct Member {
     /// clientURLs is the list of URLs the member exposes to clients for communication. If the member is not started, clientURLs will be empty.
     #[prost(string, repeated, tag = "4")]
     pub client_ur_ls: ::std::vec::Vec<std::string::String>,
+    /// isLearner indicates if the member is raft learner.
+    #[prost(bool, tag = "5")]
+    pub is_learner: bool,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MemberAddRequest {
     /// peerURLs is the list of URLs the added member will use to communicate with the cluster.
     #[prost(string, repeated, tag = "1")]
     pub peer_ur_ls: ::std::vec::Vec<std::string::String>,
+    /// isLearner indicates if the added member is raft learner.
+    #[prost(bool, tag = "2")]
+    pub is_learner: bool,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MemberAddResponse {
@@ -666,6 +672,20 @@ pub struct MemberListResponse {
     #[prost(message, optional, tag = "1")]
     pub header: ::std::option::Option<ResponseHeader>,
     /// members is a list of all members associated with the cluster.
+    #[prost(message, repeated, tag = "2")]
+    pub members: ::std::vec::Vec<Member>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MemberPromoteRequest {
+    /// ID is the member ID of the member to promote.
+    #[prost(uint64, tag = "1")]
+    pub id: u64,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MemberPromoteResponse {
+    #[prost(message, optional, tag = "1")]
+    pub header: ::std::option::Option<ResponseHeader>,
+    /// members is a list of all members after promoting the member.
     #[prost(message, repeated, tag = "2")]
     pub members: ::std::vec::Vec<Member>,
 }
@@ -758,6 +778,9 @@ pub struct StatusResponse {
     /// dbSizeInUse is the size of the backend database logically in use, in bytes, of the responding member.
     #[prost(int64, tag = "9")]
     pub db_size_in_use: i64,
+    /// isLearner indicates if the member is raft learner.
+    #[prost(bool, tag = "10")]
+    pub is_learner: bool,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthEnableRequest {}
@@ -776,6 +799,8 @@ pub struct AuthUserAddRequest {
     pub name: std::string::String,
     #[prost(string, tag = "2")]
     pub password: std::string::String,
+    #[prost(message, optional, tag = "3")]
+    pub options: ::std::option::Option<super::authpb::UserAddOptions>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthUserGetRequest {
@@ -1360,6 +1385,21 @@ pub mod cluster_client {
             let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Cluster/MemberList");
             self.inner.unary(request.into_request(), path, codec).await
         }
+        #[doc = " MemberPromote promotes a member from raft learner (non-voting) to raft voting member."]
+        pub async fn member_promote(
+            &mut self,
+            request: impl tonic::IntoRequest<super::MemberPromoteRequest>,
+        ) -> Result<tonic::Response<super::MemberPromoteResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Unknown,
+                    format!("Service was not ready: {}", e.into()),
+                )
+            })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Cluster/MemberPromote");
+            self.inner.unary(request.into_request(), path, codec).await
+        }
     }
     impl<T: Clone> Clone for ClusterClient<T> {
         fn clone(&self) -> Self {
@@ -1603,7 +1643,7 @@ pub mod auth_client {
             let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/Authenticate");
             self.inner.unary(request.into_request(), path, codec).await
         }
-        #[doc = " UserAdd adds a new user."]
+        #[doc = " UserAdd adds a new user. User name cannot be empty."]
         pub async fn user_add(
             &mut self,
             request: impl tonic::IntoRequest<super::AuthUserAddRequest>,
@@ -1709,7 +1749,7 @@ pub mod auth_client {
             let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/UserRevokeRole");
             self.inner.unary(request.into_request(), path, codec).await
         }
-        #[doc = " RoleAdd adds a new role."]
+        #[doc = " RoleAdd adds a new role. Role name cannot be empty."]
         pub async fn role_add(
             &mut self,
             request: impl tonic::IntoRequest<super::AuthRoleAddRequest>,
