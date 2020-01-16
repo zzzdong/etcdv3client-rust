@@ -1,6 +1,4 @@
-use std::fmt;
-
-use crate::error::{EtcdClientError, Result};
+use crate::error::Result;
 use crate::pb::{self, auth_client::AuthClient as PbAuthClient};
 use crate::EtcdClient;
 

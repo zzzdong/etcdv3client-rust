@@ -4,6 +4,7 @@ use tonic::transport::channel::Channel;
 
 use crate::error::{EtcdClientError, Result};
 use crate::pb::{self, kv_client::KvClient as PbKvClient};
+use crate::utils::build_prefix_end;
 use crate::EtcdClient;
 
 pub struct KvClient {
@@ -76,7 +77,11 @@ impl KvClient {
     /// Get all key-value pairs
     #[inline]
     pub async fn all(&mut self) -> Result<Vec<pb::KeyValue>> {
-        let resp = self.do_range([0x00]).with_range_end([0x00]).finish().await?;
+        let resp = self
+            .do_range([0x00])
+            .with_range_end([0x00])
+            .finish()
+            .await?;
 
         Ok(resp.kvs.iter().map(|kv| kv.clone()).collect())
     }
@@ -89,7 +94,7 @@ impl KvClient {
         Ok(self.inner.put(request).await?.into_inner())
     }
 
-    pub async fn put_kv(&mut self, key: impl AsRef<[u8]>, value: impl AsRef<[u8]>)-> Result<()> {
+    pub async fn put_kv(&mut self, key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> Result<()> {
         let _ = self.do_put(key, value).finish().await?;
         Ok(())
     }
@@ -277,23 +282,4 @@ impl<'a> fmt::Debug for DoDeleteRange<'a> {
             .field("request", &self.request)
             .finish()
     }
-}
-
-pub fn build_prefix_end(prefix: impl AsRef<[u8]>) -> Vec<u8> {
-    let no_prefix_end = Vec::new();
-
-    if prefix.as_ref().is_empty() {
-        return no_prefix_end;
-    }
-
-    let mut end = prefix.as_ref().to_vec();
-
-    for i in (0..end.len()).rev() {
-        if end[i] < 0xff {
-            end[i] += 1;
-            return end[0..=i].to_vec();
-        }
-    }
-
-    no_prefix_end
 }

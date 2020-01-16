@@ -1,15 +1,10 @@
-use crate::error::{EtcdClientError, Result, WatchError};
-// use crate::pb::*;
-// use crate::pb::{
-//     auth_client::AuthClient, cluster_client::ClusterClient, kv_client::KvClient,
-//     lease_client::LeaseClient, maintenance_client::MaintenanceClient, watch_client::WatchClient,
-// };
-use crate::auth::AuthClient;
-use crate::kv::KvClient;
-use crate::watcher::Watcher;
+use crate::error::{EtcdClientError, Result};
 use crate::pb;
 
-use tokio::sync::mpsc;
+use crate::auth::AuthClient;
+use crate::kv::KvClient;
+use crate::watch::{WatchClient, Watcher};
+
 use tonic::transport::{channel::Channel, Endpoint};
 use tonic::{metadata::MetadataValue, Request};
 
@@ -18,6 +13,7 @@ pub(crate) const TOKEN_ID: &str = "token";
 pub struct EtcdClient {
     pub kv: KvClient,
     pub auth: AuthClient,
+    pub watch: WatchClient,
 
     pub(crate) channel: Channel,
     pub(crate) interceptor: Option<tonic::Interceptor>,
@@ -66,111 +62,47 @@ impl EtcdClient {
         Ok(EtcdClient {
             auth: AuthClient::new(channel.clone(), interceptor.clone()),
             kv: KvClient::new(channel.clone(), interceptor.clone()),
+            watch: WatchClient::new(channel.clone(), interceptor.clone()),
             channel,
             interceptor,
         })
     }
 
-        /// Get value by key
-        #[inline]
-        pub async fn get(&mut self, key: impl AsRef<[u8]>) -> Result<Vec<u8>> {
-            self.kv.get(key).await
-        }
-    
-        /// Get string by key
-        #[inline]
-        pub async fn get_string(&mut self, key: impl AsRef<[u8]>) -> Result<String> {
-            self.kv.get_string(key).await
-        }
-    
-        /// Get key-value pairs with prefix
-        #[inline]
-        pub async fn get_with_prefix(&mut self, key: impl AsRef<[u8]>) -> Result<Vec<pb::KeyValue>> {
-            self.kv.get_with_prefix(key).await
-        }
-    
-        /// Get all key-value pairs
-        #[inline]
-        pub async fn all(&mut self) -> Result<Vec<pb::KeyValue>> {
-            self.kv.all().await
-        }
-        
-        #[inline]
-        pub async fn put(&mut self, key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> Result<()> {
-            self.kv.put_kv(key, value).await
-        }
+    /// Get value by key
+    #[inline]
+    pub async fn get(&mut self, key: impl AsRef<[u8]>) -> Result<Vec<u8>> {
+        self.kv.get(key).await
+    }
 
+    /// Get string by key
+    #[inline]
+    pub async fn get_string(&mut self, key: impl AsRef<[u8]>) -> Result<String> {
+        self.kv.get_string(key).await
+    }
 
-    // /// get a token with the given username and password
-    // pub async fn get_token(
-    //     &mut self,
-    //     username: impl ToString,
-    //     password: impl ToString,
-    // ) -> Result<String, EtcdClientError> {
-    //     let req = AuthenticateRequest {
-    //         name: username.to_string(),
-    //         password: password.to_string(),
-    //     };
+    /// Get key-value pairs with prefix
+    #[inline]
+    pub async fn get_with_prefix(&mut self, key: impl AsRef<[u8]>) -> Result<Vec<pb::KeyValue>> {
+        self.kv.get_with_prefix(key).await
+    }
 
-    //     let resp = self.auth.authenticate(req).await?.into_inner();
+    /// Get all key-value pairs
+    #[inline]
+    pub async fn all(&mut self) -> Result<Vec<pb::KeyValue>> {
+        self.kv.all().await
+    }
 
-    //     Ok(resp.token)
-    // }
+    #[inline]
+    pub async fn put(&mut self, key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> Result<()> {
+        self.kv.put_kv(key, value).await
+    }
 
-    // /// watch a key
-    // pub async fn watch(&mut self, key: impl AsRef<[u8]>) -> Result<Watcher, EtcdClientError> {
-    //     let req = WatchCreateRequest {
-    //         key: key.as_ref().to_vec(),
-    //         ..Default::default()
-    //     };
-
-    //     self.inner_watch(req).await
-    // }
-
-    // /// watch a key with prefix
-    // pub async fn watch_prefix(
-    //     &mut self,
-    //     key: impl AsRef<[u8]>,
-    // ) -> Result<Watcher, EtcdClientError> {
-    //     let req = WatchCreateRequest {
-    //         key: key.as_ref().to_vec(),
-    //         range_end: build_prefix_end(key),
-    //         ..Default::default()
-    //     };
-
-    //     self.inner_watch(req).await
-    // }
-
-    // async fn inner_watch(&mut self, req: WatchCreateRequest) -> Result<Watcher, EtcdClientError> {
-    //     let (req_tx, req_rx) = mpsc::unbounded_channel::<WatchRequest>();
-
-    //     let create_watch = watch_request::RequestUnion::CreateRequest(req);
-    //     let create_req = WatchRequest {
-    //         request_union: Some(create_watch),
-    //     };
-
-    //     req_tx.send(create_req).map_err(WatchError::from)?;
-
-    //     let resp = self.watch.watch(req_rx).await?;
-    //     let mut inbound = resp.into_inner();
-    //     let watch_id;
-
-    //     match inbound.message().await? {
-    //         Some(msg) => watch_id = msg.watch_id,
-    //         None => return Err(EtcdClientError::from(WatchError::StartWatchError)),
-    //     }
-
-    //     let watcher = Watcher::new(watch_id, req_tx, inbound);
-
-    //     Ok(watcher)
-    // }
+    pub async fn watch(&mut self, key: impl AsRef<[u8]>) -> Result<Watcher> {
+        self.watch.watch(key).await
+    }
 }
 
-async fn get_token(
-    endpoint: impl AsRef<str>,
-    name: &str,
-    password: &str,
-) -> Result<String> {
+async fn get_token(endpoint: impl AsRef<str>, name: &str, password: &str) -> Result<String> {
     let channel = new_channel(vec![endpoint]).await?;
 
     let mut auth_client = AuthClient::new(channel, None);
@@ -194,6 +126,7 @@ async fn new_channel(endpoints: Vec<impl AsRef<str>>) -> Result<Channel> {
 
     match eps.len() {
         0 => Err(EtcdClientError::ErrMsg("endpoint uri empty".to_string())),
+        1 => eps[0].connect().await.map_err(EtcdClientError::from),
         _ => Ok(Channel::balance_list(eps.into_iter())),
     }
 }
