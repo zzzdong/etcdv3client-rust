@@ -7,6 +7,8 @@ use tokio::sync::mpsc::error::SendError;
 
 use crate::pb::WatchRequest;
 
+pub(crate) type Result<T> = core::result::Result<T, EtcdClientError>;
+
 #[derive(Error, Debug)]
 pub enum EtcdClientError {
     #[error("uri invalid")]
@@ -16,7 +18,7 @@ pub enum EtcdClientError {
     #[error("from utf8 error")]
     FromUtf8(#[from] FromUtf8Error),
     #[error("GRPC request error")]
-    GRPCRequest(#[from] tonic::Status),
+    GRPCError(#[from] tonic::Status),
     #[error("transport error")]
     TransportError(#[from] tonic::transport::Error),
     #[error("error message: {0}")]

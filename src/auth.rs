@@ -1,40 +1,35 @@
-// auth client
-#![allow(dead_code)]
+use std::fmt;
 
-use tonic::Request;
+use crate::error::{EtcdClientError, Result};
+use crate::pb::{self, auth_client::AuthClient as PbAuthClient};
+use crate::EtcdClient;
 
-use crate::error::EtcdClientError;
-use crate::pb::etcdserverpb::client::AuthClient;
-use crate::pb::etcdserverpb::AuthenticateRequest;
+use tonic::transport::channel::Channel;
 
-pub struct SimpleAuthClient {
-    inner: AuthClient<tonic::transport::channel::Channel>,
+pub struct AuthClient {
+    inner: PbAuthClient<Channel>,
 }
 
-impl SimpleAuthClient {
-    pub async fn new(
-        endpoints: Vec<impl AsRef<str>>,
-        token: Option<impl AsRef<str>>,
-    ) -> Result<SimpleAuthClient, EtcdClientError> {
-        let channel = crate::conn::new_channel(endpoints, token)?;
+impl AuthClient {
+    pub fn new(channel: Channel, interceptor: Option<tonic::Interceptor>) -> Self {
+        let client = match interceptor {
+            Some(i) => PbAuthClient::with_interceptor(channel, i),
+            None => PbAuthClient::new(channel),
+        };
 
-        let client = AuthClient::new(channel);
-        Ok(SimpleAuthClient { inner: client })
+        AuthClient { inner: client }
     }
 
-    pub async fn get_token(
-        &mut self,
-        name: impl AsRef<str>,
-        password: impl AsRef<str>,
-    ) -> Result<String, EtcdClientError> {
-        let resp = self
-            .inner
-            .authenticate(Request::new(AuthenticateRequest {
-                name: name.as_ref().to_owned(),
-                password: password.as_ref().to_owned(),
-            }))
-            .await?;
+    pub fn with_client(client: &EtcdClient) -> Self {
+        let channel = client.channel.clone();
+        let interceptor = client.interceptor.clone();
+        Self::new(channel, interceptor)
+    }
 
-        Ok(resp.into_inner().token)
+    pub async fn do_authenticate(
+        &mut self,
+        request: pb::AuthenticateRequest,
+    ) -> Result<pb::AuthenticateResponse> {
+        Ok(self.inner.authenticate(request).await?.into_inner())
     }
 }
