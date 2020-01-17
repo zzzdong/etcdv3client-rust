@@ -1,7 +1,7 @@
 etcdv3client-rust
 ======
 
-NOTE: `etcdv3client` is currently early development, you should NOT use it in production environment.
+NOTE: `etcdv3client` currently under early development, you should NOT use it in production environment.
 
 [![Crates.io](https://img.shields.io/crates/v/etcdv3client)](https://crates.io/crates/etcdv3client)
 [![Documentation](https://docs.rs/etcdv3client/badge.svg)](https://docs.rs/etcdv3client)
@@ -14,9 +14,19 @@ NOTE: `etcdv3client` is currently early development, you should NOT use it in pr
 
 ## Getting Started
 
-Example can be found in [`example`].
+Examples can be found in [`examples`].
 
-### Rust Version
+## Support APIs
+
+- [x] KV
+- [x] Watch
+- [ ] Lease
+- [ ] Cluster
+- [ ] Maintenance
+- [ ] Auth
+
+## Rust Version
+
 `etcdv3client` currently works on rust `1.39` and above as it requires support for the `async_await`
 feature.
 
