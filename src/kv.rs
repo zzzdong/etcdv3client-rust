@@ -33,7 +33,7 @@ impl KvClient {
     /// let resp = client.do_range("hello").with_prefix().finish().await.unwrap();
     /// ```
     pub fn do_range(&mut self, key: impl AsRef<[u8]>) -> DoRange {
-        DoRange::new(key, &mut self.inner)
+        DoRange::new(key, self)
     }
 
     /// It can also do a raw range request:
@@ -86,28 +86,57 @@ impl KvClient {
         Ok(resp.kvs.iter().map(|kv| kv.clone()).collect())
     }
 
+    /// Do put request
+    /// ```rust
+    /// client.do_put("hello", "world").finish().await.unwrap();
+    /// ```
     pub fn do_put(&mut self, key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> DoPut {
-        DoPut::new(key, value, &mut self.inner)
+        DoPut::new(key, value, self)
     }
 
     pub async fn put(&mut self, request: pb::PutRequest) -> Result<pb::PutResponse> {
         Ok(self.inner.put(request).await?.into_inner())
     }
 
+    /// Put a key-value paire
     pub async fn put_kv(&mut self, key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> Result<()> {
-        let _ = self.do_put(key, value).finish().await?;
-        Ok(())
+        self.do_put(key, value).finish().await.map(|_| ())
     }
 
-    pub fn delete_range(&mut self, key: impl AsRef<[u8]>) -> DoDeleteRange {
-        DoDeleteRange::new(key, &mut self.inner)
+    /// Do delete range request
+    /// ```rust
+    /// client.do_delete_range("hello").finish().await.unwrap();
+    /// ```
+    pub fn do_delete_range(&mut self, key: impl AsRef<[u8]>) -> DoDeleteRange {
+        DoDeleteRange::new(key, self)
     }
 
-    pub async fn do_delete_range(
+    pub async fn delete_range(
         &mut self,
         request: pb::DeleteRangeRequest,
     ) -> Result<pb::DeleteRangeResponse> {
         Ok(self.inner.delete_range(request).await?.into_inner())
+    }
+
+    /// Delete a key-value paire
+    pub async fn delete(&mut self, key: impl AsRef<[u8]>) -> Result<()> {
+        self.do_delete_range(key).finish().await.map(|_| ())
+    }
+
+    pub fn do_txn(&mut self) -> DoTxn {
+        DoTxn::new(self)
+    }
+
+    /// Txn processes multiple requests in a single transaction.
+    pub async fn txn(&mut self, request: pb::TxnRequest) -> Result<pb::TxnResponse> {
+        Ok(self.inner.txn(request).await?.into_inner())
+    }
+
+    /// Compact compacts the event history in the etcd key-value store.
+    pub async fn compact(&mut self, revision: i64, physical: bool) -> Result<()> {
+        let req = pb::CompactionRequest::new(revision, physical);
+        let _resp = self.inner.compact(req).await?.into_inner();
+        Ok(())
     }
 }
 
@@ -122,11 +151,11 @@ impl pb::RangeRequest {
 
 pub struct DoRange<'a> {
     pub request: pb::RangeRequest,
-    client: &'a mut PbKvClient<Channel>,
+    client: &'a mut KvClient,
 }
 
 impl<'a> DoRange<'a> {
-    pub fn new(key: impl AsRef<[u8]>, client: &'a mut PbKvClient<Channel>) -> Self {
+    pub fn new(key: impl AsRef<[u8]>, client: &'a mut KvClient) -> Self {
         DoRange {
             request: pb::RangeRequest::new(key),
             client,
@@ -135,7 +164,7 @@ impl<'a> DoRange<'a> {
 
     pub async fn finish(self) -> Result<pb::RangeResponse> {
         let DoRange { request, client } = self;
-        Ok(client.range(request).await?.into_inner())
+        client.range(request).await
     }
 
     /// The key range end to fetch.
@@ -189,15 +218,11 @@ impl pb::PutRequest {
 
 pub struct DoPut<'a> {
     pub request: pb::PutRequest,
-    client: &'a mut PbKvClient<Channel>,
+    client: &'a mut KvClient,
 }
 
 impl<'a> DoPut<'a> {
-    pub fn new(
-        key: impl AsRef<[u8]>,
-        value: impl AsRef<[u8]>,
-        client: &'a mut PbKvClient<Channel>,
-    ) -> Self {
+    pub fn new(key: impl AsRef<[u8]>, value: impl AsRef<[u8]>, client: &'a mut KvClient) -> Self {
         DoPut {
             request: pb::PutRequest::new(key, value),
             client,
@@ -206,7 +231,7 @@ impl<'a> DoPut<'a> {
 
     pub async fn finish(self) -> Result<pb::PutResponse> {
         let DoPut { request, client } = self;
-        Ok(client.put(request).await?.into_inner())
+        client.put(request).await
     }
 
     /// The lease ID to associate with the key in the key-value store. A lease value of 0 indicates no lease.
@@ -241,11 +266,11 @@ impl pb::DeleteRangeRequest {
 
 pub struct DoDeleteRange<'a> {
     pub request: pb::DeleteRangeRequest,
-    client: &'a mut PbKvClient<Channel>,
+    client: &'a mut KvClient,
 }
 
 impl<'a> DoDeleteRange<'a> {
-    pub fn new(key: impl AsRef<[u8]>, client: &'a mut PbKvClient<Channel>) -> Self {
+    pub fn new(key: impl AsRef<[u8]>, client: &'a mut KvClient) -> Self {
         DoDeleteRange {
             request: pb::DeleteRangeRequest::new(key),
             client,
@@ -254,7 +279,7 @@ impl<'a> DoDeleteRange<'a> {
 
     pub async fn finish(self) -> Result<pb::DeleteRangeResponse> {
         let DoDeleteRange { request, client } = self;
-        Ok(client.delete_range(request).await?.into_inner())
+        client.delete_range(request).await
     }
 
     /// The key range end to delete.
@@ -281,5 +306,142 @@ impl<'a> fmt::Debug for DoDeleteRange<'a> {
         f.debug_struct("RunDeleteRange")
             .field("request", &self.request)
             .finish()
+    }
+}
+
+impl pb::Compare {
+    pub fn new(
+        key: impl AsRef<[u8]>,
+        result: pb::compare::CompareResult,
+        target_union: pb::compare::TargetUnion,
+    ) -> Self {
+        let target = match target_union {
+            pb::compare::TargetUnion::Version(_) => pb::compare::CompareTarget::Version,
+            pb::compare::TargetUnion::CreateRevision(_) => pb::compare::CompareTarget::Create,
+            pb::compare::TargetUnion::ModRevision(_) => pb::compare::CompareTarget::Mod,
+            pb::compare::TargetUnion::Value(_) => pb::compare::CompareTarget::Value,
+            pb::compare::TargetUnion::Lease(_) => pb::compare::CompareTarget::Lease,
+        };
+
+        pb::Compare {
+            key: key.as_ref().to_vec(),
+            result: result.into(),
+            target: target.into(),
+            target_union: Some(target_union),
+            ..Default::default()
+        }
+    }
+
+    /// Set key range end.
+    pub fn with_range_end(mut self, end: impl AsRef<[u8]>) -> Self {
+        self.range_end = end.as_ref().to_vec();
+        self
+    }
+
+    /// Set key prefix.
+    pub fn with_prefix(mut self) -> Self {
+        self.range_end = build_prefix_end(&self.key);
+        self
+    }
+}
+
+impl pb::TxnRequest {
+    pub fn new() -> Self {
+        pb::TxnRequest {
+            ..Default::default()
+        }
+    }
+
+    pub fn with_if(mut self, cmps: Vec<pb::Compare>) -> Self {
+        self.compare = cmps.into_iter().map(|c| c.into()).collect();
+        self
+    }
+
+    pub fn with_then(mut self, ops: Vec<pb::RequestOp>) -> Self {
+        self.success = ops;
+        self
+    }
+
+    pub fn with_else(mut self, ops: Vec<pb::RequestOp>) -> Self {
+        self.failure = ops;
+        self
+    }
+}
+
+impl From<pb::RangeRequest> for pb::RequestOp {
+    fn from(request: pb::RangeRequest) -> Self {
+        let request_op = pb::request_op::Request::RequestRange(request);
+        pb::RequestOp {
+            request: Some(request_op),
+        }
+    }
+}
+
+impl From<pb::PutRequest> for pb::RequestOp {
+    fn from(request: pb::PutRequest) -> Self {
+        let request_op = pb::request_op::Request::RequestPut(request);
+        pb::RequestOp {
+            request: Some(request_op),
+        }
+    }
+}
+
+impl From<pb::DeleteRangeRequest> for pb::RequestOp {
+    fn from(request: pb::DeleteRangeRequest) -> Self {
+        let request_op = pb::request_op::Request::RequestDeleteRange(request);
+        pb::RequestOp {
+            request: Some(request_op),
+        }
+    }
+}
+
+impl From<pb::TxnRequest> for pb::RequestOp {
+    fn from(request: pb::TxnRequest) -> Self {
+        let request_op = pb::request_op::Request::RequestTxn(request);
+        pb::RequestOp {
+            request: Some(request_op),
+        }
+    }
+}
+
+pub struct DoTxn<'a> {
+    pub request: pb::TxnRequest,
+    client: &'a mut KvClient,
+}
+
+impl<'a> DoTxn<'a> {
+    pub fn new(client: &'a mut KvClient) -> Self {
+        DoTxn {
+            request: pb::TxnRequest {
+                ..Default::default()
+            },
+            client,
+        }
+    }
+
+    pub async fn finish(self) -> Result<pb::TxnResponse> {
+        let DoTxn { request, client } = self;
+        client.txn(request).await
+    }
+
+    pub fn with_if(mut self, cmps: Vec<pb::Compare>) -> Self {
+        self.request = self.request.with_if(cmps);
+        self
+    }
+
+    pub fn with_then(mut self, ops: Vec<pb::RequestOp>) -> Self {
+        self.request = self.request.with_then(ops);
+        self
+    }
+
+    pub fn with_else(mut self, ops: Vec<pb::RequestOp>) -> Self {
+        self.request = self.request.with_else(ops);
+        self
+    }
+}
+
+impl pb::CompactionRequest {
+    pub fn new(revision: i64, physical: bool) -> Self {
+        pb::CompactionRequest { revision, physical }
     }
 }
