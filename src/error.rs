@@ -6,6 +6,7 @@ use thiserror::Error;
 use tokio::sync::mpsc::error::SendError;
 
 use crate::pb::WatchRequest;
+use crate::pb::LeaseKeepAliveRequest;
 
 pub(crate) type Result<T> = core::result::Result<T, EtcdClientError>;
 
@@ -29,6 +30,8 @@ pub enum EtcdClientError {
     EndpointError,
     #[error("watch error")]
     WatchError(#[from] WatchError),
+    #[error("lease error")]
+    LeaseError(#[from] LeaseError),
 }
 
 #[derive(Error, Debug)]
@@ -41,4 +44,10 @@ pub enum WatchError {
     WatchCanceled,
     #[error("watch finished")]
     WatchFinished,
+}
+
+#[derive(Error, Debug)]
+pub enum LeaseError {
+    #[error("watch request error")]
+    LeaseKeepAliveRequestError(#[from] SendError<LeaseKeepAliveRequest>)
 }

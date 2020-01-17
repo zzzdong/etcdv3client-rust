@@ -43,11 +43,18 @@ impl WatchClient {
     /// # Ok(())
     /// # }
     pub fn do_watch(&mut self, key: impl AsRef<[u8]>) -> DoCreateWatch {
-        DoCreateWatch::new(key, &mut self.inner)
+        DoCreateWatch::new(key, self)
+    }
+
+    pub async fn watch(
+        &mut self,
+        request: impl tonic::IntoStreamingRequest<Message = pb::WatchRequest>,
+    ) -> Result<tonic::codec::Streaming<pb::WatchResponse>> {
+        Ok(self.inner.watch(request).await?.into_inner())
     }
 
     /// watch a key
-    pub async fn watch(&mut self, key: impl AsRef<[u8]>) -> Result<Watcher> {
+    pub async fn watch_key(&mut self, key: impl AsRef<[u8]>) -> Result<Watcher> {
         self.do_watch(key).finish().await
     }
 
@@ -59,11 +66,11 @@ impl WatchClient {
 
 pub struct DoCreateWatch<'a> {
     pub request: pb::WatchCreateRequest,
-    client: &'a mut PbWatchClient<Channel>,
+    client: &'a mut WatchClient,
 }
 
 impl<'a> DoCreateWatch<'a> {
-    pub fn new(key: impl AsRef<[u8]>, client: &'a mut PbWatchClient<Channel>) -> Self {
+    pub fn new(key: impl AsRef<[u8]>, client: &'a mut WatchClient) -> Self {
         DoCreateWatch {
             request: pb::WatchCreateRequest::new(key),
             client,
@@ -81,16 +88,15 @@ impl<'a> DoCreateWatch<'a> {
         let (mut req_tx, req_rx) = channel::<pb::WatchRequest>(MPSC_CHANNEL_SIZE);
         req_tx.send(create_req).await.map_err(WatchError::from)?;
 
-        let resp = client.watch(req_rx).await?;
-        let mut inbound = resp.into_inner();
+        let mut resp = client.watch(req_rx).await?;
         let watch_id;
 
-        match inbound.message().await? {
+        match resp.message().await? {
             Some(msg) => watch_id = msg.watch_id,
             None => return Err(EtcdClientError::from(WatchError::StartWatchError)),
         }
 
-        let watcher = Watcher::new(watch_id, req_tx, inbound);
+        let watcher = Watcher::new(watch_id, req_tx, resp);
 
         Ok(watcher)
     }

@@ -105,7 +105,7 @@ impl EtcdClient {
 
     /// Watch a key
     pub async fn watch(&mut self, key: impl AsRef<[u8]>) -> Result<Watcher> {
-        self.watch.watch(key).await
+        self.watch.watch_key(key).await
     }
 }
 
