@@ -44,8 +44,7 @@ impl EtcdClient {
         let channel = new_channel(endpoints).await?;
 
         let mut interceptor = None;
-        if token.is_some() {
-            let t = token.unwrap();
+        if let Some(t) = token {
             let token = MetadataValue::from_str(&t).unwrap();
             interceptor = Some(
                 {
@@ -92,11 +91,19 @@ impl EtcdClient {
         self.kv.all().await
     }
 
+    /// Put a key-value pair
     #[inline]
     pub async fn put(&mut self, key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> Result<()> {
         self.kv.put_kv(key, value).await
     }
 
+    /// Delete a key-value pair
+    #[inline]
+    pub async fn delete(&mut self, key: impl AsRef<[u8]>) -> Result<()> {
+        self.kv.delete(key).await
+    }
+
+    /// Watch a key
     pub async fn watch(&mut self, key: impl AsRef<[u8]>) -> Result<Watcher> {
         self.watch.watch(key).await
     }

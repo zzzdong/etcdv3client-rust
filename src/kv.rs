@@ -71,7 +71,7 @@ impl KvClient {
     pub async fn get_with_prefix(&mut self, key: impl AsRef<[u8]>) -> Result<Vec<pb::KeyValue>> {
         let resp = self.do_range(key).with_prefix().finish().await?;
 
-        Ok(resp.kvs.iter().map(|kv| kv.clone()).collect())
+        Ok(resp.kvs.to_vec())
     }
 
     /// Get all key-value pairs
@@ -83,7 +83,7 @@ impl KvClient {
             .finish()
             .await?;
 
-        Ok(resp.kvs.iter().map(|kv| kv.clone()).collect())
+        Ok(resp.kvs.to_vec())
     }
 
     /// Do put request
@@ -353,7 +353,7 @@ impl pb::TxnRequest {
     }
 
     pub fn with_if(mut self, cmps: Vec<pb::Compare>) -> Self {
-        self.compare = cmps.into_iter().map(|c| c.into()).collect();
+        self.compare = cmps;
         self
     }
 

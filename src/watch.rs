@@ -142,7 +142,7 @@ impl pb::WatchRequest {
     }
 
     pub fn cancel_watch(watch_id: i64) -> Self {
-        let request = pb::WatchCancelRequest { watch_id: watch_id };
+        let request = pb::WatchCancelRequest { watch_id };
         let request_union = pb::watch_request::RequestUnion::CancelRequest(request);
 
         pb::WatchRequest {
