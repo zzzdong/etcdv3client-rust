@@ -5,10 +5,10 @@ use http::uri;
 use thiserror::Error;
 use tokio::sync::mpsc::error::SendError;
 
-use crate::pb::WatchRequest;
 use crate::pb::LeaseKeepAliveRequest;
+use crate::pb::WatchRequest;
 
-pub(crate) type Result<T> = core::result::Result<T, EtcdClientError>;
+pub(crate) type Result<T> = std::result::Result<T, EtcdClientError>;
 
 #[derive(Error, Debug)]
 pub enum EtcdClientError {
@@ -49,5 +49,5 @@ pub enum WatchError {
 #[derive(Error, Debug)]
 pub enum LeaseError {
     #[error("watch request error")]
-    LeaseKeepAliveRequestError(#[from] SendError<LeaseKeepAliveRequest>)
+    LeaseKeepAliveRequestError(#[from] SendError<LeaseKeepAliveRequest>),
 }

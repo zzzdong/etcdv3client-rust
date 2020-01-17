@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::error::{EtcdClientError, LeaseError, Result};
+use crate::error::{LeaseError, Result};
 use crate::pb::{self, lease_client::LeaseClient as PbLeaseClient};
 use crate::EtcdClient;
 
@@ -31,15 +31,17 @@ impl LeaseClient {
         Self::new(channel, interceptor)
     }
 
-    pub fn do_lease_grant(&mut self, ttl: i64) -> DoLeaseGrant {
-        DoLeaseGrant::new(ttl, self)
-    }
-
+    /// LeaseGrant creates a lease which expires if the server
+    /// does not receive a keepAlive within a given time to live period.
     pub async fn lease_grant(
         &mut self,
         request: pb::LeaseGrantRequest,
     ) -> Result<pb::LeaseGrantResponse> {
         Ok(self.inner.lease_grant(request).await?.into_inner())
+    }
+
+    pub fn do_lease_grant(&mut self, ttl: i64) -> DoLeaseGrant {
+        DoLeaseGrant::new(ttl, self)
     }
 
     pub async fn grant_lease(&mut self, ttl: i64, lease_id: i64) -> Result<pb::LeaseGrantResponse> {
@@ -49,6 +51,7 @@ impl LeaseClient {
             .await
     }
 
+    /// LeaseRevoke revokes a lease.
     pub async fn lease_revoke(
         &mut self,
         request: pb::LeaseRevokeRequest,
@@ -61,6 +64,7 @@ impl LeaseClient {
         self.lease_revoke(request).await.map(|_| ())
     }
 
+    /// LeaseKeepAlive keeps the lease alive by streaming keep alive requests.
     pub async fn lease_keep_alive(
         &mut self,
         request: impl tonic::IntoStreamingRequest<Message = pb::LeaseKeepAliveRequest>,
@@ -72,6 +76,11 @@ impl LeaseClient {
         DoLeaseKeepAlive::new(lease_id, self)
     }
 
+    pub async fn keep_lease_alive(&mut self, lease_id: i64) -> Result<LeaseKeepAliver> {
+        self.do_lease_keep_alive(lease_id).finish().await
+    }
+
+    /// LeaseTimeToLive retrieves lease information.
     pub async fn lease_time_to_live(
         &mut self,
         request: pb::LeaseTimeToLiveRequest,
@@ -79,11 +88,25 @@ impl LeaseClient {
         Ok(self.inner.lease_time_to_live(request).await?.into_inner())
     }
 
+    pub async fn get_lease_info(
+        &mut self,
+        lease_id: i64,
+        keys: bool,
+    ) -> Result<pb::LeaseTimeToLiveResponse> {
+        self.lease_time_to_live(pb::LeaseTimeToLiveRequest::new(lease_id, keys))
+            .await
+    }
+
+    /// LeaseLeases lists all existing leases.
     pub async fn lease_leases(
         &mut self,
         request: pb::LeaseLeasesRequest,
     ) -> Result<pb::LeaseLeasesResponse> {
         Ok(self.inner.lease_leases(request).await?.into_inner())
+    }
+
+    pub async fn list_leases(&mut self) -> Result<pb::LeaseLeasesResponse> {
+        self.lease_leases(pb::LeaseLeasesRequest::new()).await
     }
 }
 
@@ -153,9 +176,9 @@ impl<'a> DoLeaseKeepAlive<'a> {
     pub async fn finish(self) -> Result<LeaseKeepAliver> {
         let DoLeaseKeepAlive { request, client } = self;
 
-        let (mut req_tx, req_rx) = channel::<pb::LeaseKeepAliveRequest>(MPSC_CHANNEL_SIZE);
+        let (req_tx, req_rx) = channel::<pb::LeaseKeepAliveRequest>(MPSC_CHANNEL_SIZE);
 
-        let mut resp = client.lease_keep_alive(req_rx).await?;
+        let resp = client.lease_keep_alive(req_rx).await?;
 
         Ok(LeaseKeepAliver::new(request.id, req_tx, resp))
     }
@@ -202,5 +225,11 @@ impl LeaseKeepAliver {
 impl pb::LeaseTimeToLiveRequest {
     pub fn new(lease_id: i64, keys: bool) -> Self {
         pb::LeaseTimeToLiveRequest { id: lease_id, keys }
+    }
+}
+
+impl pb::LeaseLeasesRequest {
+    fn new() -> Self {
+        pb::LeaseLeasesRequest {}
     }
 }
