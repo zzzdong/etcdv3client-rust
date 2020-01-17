@@ -151,6 +151,36 @@ impl pb::WatchRequest {
     }
 }
 
+impl From<pb::WatchCreateRequest> for pb::WatchRequest {
+    fn from(request: pb::WatchCreateRequest) -> Self {
+        let request_union = pb::watch_request::RequestUnion::CreateRequest(request);
+
+        pb::WatchRequest {
+            request_union: Some(request_union),
+        }
+    }
+}
+
+impl From<pb::WatchProgressRequest> for pb::WatchRequest {
+    fn from(request: pb::WatchProgressRequest) -> Self {
+        let request_union = pb::watch_request::RequestUnion::ProgressRequest(request);
+
+        pb::WatchRequest {
+            request_union: Some(request_union),
+        }
+    }
+}
+
+impl From<pb::WatchCancelRequest> for pb::WatchRequest {
+    fn from(request: pb::WatchCancelRequest) -> Self {
+        let request_union = pb::watch_request::RequestUnion::CancelRequest(request);
+
+        pb::WatchRequest {
+            request_union: Some(request_union),
+        }
+    }
+}
+
 pub struct Watcher {
     watch_id: i64,
     req_tx: Sender<pb::WatchRequest>,
