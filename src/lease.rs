@@ -4,10 +4,9 @@ use crate::error::{LeaseError, Result};
 use crate::pb::{self, lease_client::LeaseClient as PbLeaseClient};
 use crate::EtcdClient;
 
-use tonic::transport::channel::Channel;
-
 use tokio::sync::mpsc::{channel, Sender};
 use tonic::codec::Streaming;
+use tonic::transport::channel::Channel;
 
 const MPSC_CHANNEL_SIZE: usize = 1;
 
@@ -40,15 +39,12 @@ impl LeaseClient {
         Ok(self.inner.lease_grant(request).await?.into_inner())
     }
 
-    pub fn do_lease_grant(&mut self, ttl: i64) -> DoLeaseGrant {
+    pub fn do_grant(&mut self, ttl: i64) -> DoLeaseGrant {
         DoLeaseGrant::new(ttl, self)
     }
 
-    pub async fn grant_lease(&mut self, ttl: i64, lease_id: i64) -> Result<pb::LeaseGrantResponse> {
-        self.do_lease_grant(ttl)
-            .with_lease_id(lease_id)
-            .finish()
-            .await
+    pub async fn grant(&mut self, ttl: i64, lease_id: i64) -> Result<pb::LeaseGrantResponse> {
+        self.do_grant(ttl).with_lease_id(lease_id).finish().await
     }
 
     /// LeaseRevoke revokes a lease.
@@ -59,7 +55,7 @@ impl LeaseClient {
         Ok(self.inner.lease_revoke(request).await?.into_inner())
     }
 
-    pub async fn revoke_lease(&mut self, lease_id: i64) -> Result<()> {
+    pub async fn revoke(&mut self, lease_id: i64) -> Result<()> {
         let request = pb::LeaseRevokeRequest::new(lease_id);
         self.lease_revoke(request).await.map(|_| ())
     }
@@ -72,12 +68,14 @@ impl LeaseClient {
         Ok(self.inner.lease_keep_alive(request).await?.into_inner())
     }
 
-    pub fn do_lease_keep_alive(&mut self, lease_id: i64) -> DoLeaseKeepAlive {
+    pub fn do_keep_alive(&mut self, lease_id: i64) -> DoLeaseKeepAlive {
         DoLeaseKeepAlive::new(lease_id, self)
     }
 
-    pub async fn keep_lease_alive(&mut self, lease_id: i64) -> Result<LeaseKeepAliver> {
-        self.do_lease_keep_alive(lease_id).finish().await
+    /// Keep the lease alive.allo
+    /// When call, it sent the first keep alive message and return LeaseKeepAliver for further call.
+    pub async fn keep_alive(&mut self, lease_id: i64) -> Result<LeaseKeepAliver> {
+        self.do_keep_alive(lease_id).finish().await
     }
 
     /// LeaseTimeToLive retrieves lease information.
@@ -88,7 +86,7 @@ impl LeaseClient {
         Ok(self.inner.lease_time_to_live(request).await?.into_inner())
     }
 
-    pub async fn get_lease_info(
+    pub async fn get_info(
         &mut self,
         lease_id: i64,
         keys: bool,
@@ -105,7 +103,7 @@ impl LeaseClient {
         Ok(self.inner.lease_leases(request).await?.into_inner())
     }
 
-    pub async fn list_leases(&mut self) -> Result<pb::LeaseLeasesResponse> {
+    pub async fn list(&mut self) -> Result<pb::LeaseLeasesResponse> {
         self.lease_leases(pb::LeaseLeasesRequest::new()).await
     }
 }
@@ -161,26 +159,34 @@ impl pb::LeaseKeepAliveRequest {
 }
 
 pub struct DoLeaseKeepAlive<'a> {
-    pub request: pb::LeaseKeepAliveRequest,
+    pub lease_id: i64,
     client: &'a mut LeaseClient,
 }
 
 impl<'a> DoLeaseKeepAlive<'a> {
     pub fn new(lease_id: i64, client: &'a mut LeaseClient) -> Self {
-        DoLeaseKeepAlive {
-            request: pb::LeaseKeepAliveRequest::new(lease_id),
-            client,
-        }
+        DoLeaseKeepAlive { lease_id, client }
     }
 
     pub async fn finish(self) -> Result<LeaseKeepAliver> {
-        let DoLeaseKeepAlive { request, client } = self;
+        let DoLeaseKeepAlive { lease_id, client } = self;
 
-        let (req_tx, req_rx) = channel::<pb::LeaseKeepAliveRequest>(MPSC_CHANNEL_SIZE);
+        let (mut req_tx, req_rx) = channel::<pb::LeaseKeepAliveRequest>(MPSC_CHANNEL_SIZE);
+
+        let request = pb::LeaseKeepAliveRequest::new(lease_id);
+        req_tx.send(request).await.map_err(LeaseError::from)?;
 
         let resp = client.lease_keep_alive(req_rx).await?;
 
-        Ok(LeaseKeepAliver::new(request.id, req_tx, resp))
+        Ok(LeaseKeepAliver::new(lease_id, req_tx, resp))
+    }
+}
+
+impl<'a> fmt::Debug for DoLeaseKeepAlive<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DoLeaseKeepAlive")
+            .field("lease_id", &self.lease_id)
+            .finish()
     }
 }
 
@@ -219,6 +225,14 @@ impl LeaseKeepAliver {
             Some(resp) => Ok(Some(resp)),
             None => Ok(None),
         }
+    }
+}
+
+impl fmt::Debug for LeaseKeepAliver {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("LeaseKeepAliver")
+            .field("lease_id", &self.lease_id)
+            .finish()
     }
 }
 

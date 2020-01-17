@@ -5,10 +5,9 @@ use crate::pb::{self, watch_client::WatchClient as PbWatchClient};
 use crate::utils::build_prefix_end;
 use crate::EtcdClient;
 
-use tonic::transport::channel::Channel;
-
 use tokio::sync::mpsc::{channel, Sender};
 use tonic::codec::Streaming;
+use tonic::transport::channel::Channel;
 
 const MPSC_CHANNEL_SIZE: usize = 1;
 
@@ -242,5 +241,13 @@ impl Watcher {
             Some(resp) => Ok(Some(resp)),
             None => Ok(None),
         }
+    }
+}
+
+impl fmt::Debug for Watcher {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Watcher")
+            .field("watch_id", &self.watch_id)
+            .finish()
     }
 }

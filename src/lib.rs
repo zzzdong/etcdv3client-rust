@@ -11,5 +11,5 @@ mod watch;
 pub use client::EtcdClient;
 pub use error::EtcdClientError;
 pub use kv::KvClient;
-pub use lease::LeaseClient;
-pub use watch::WatchClient;
+pub use lease::{LeaseClient, LeaseKeepAliver};
+pub use watch::{WatchClient, Watcher};
