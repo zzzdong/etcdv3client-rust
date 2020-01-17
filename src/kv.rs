@@ -29,8 +29,14 @@ impl KvClient {
 
     /// Do range request
     ///
-    /// ```rust
-    /// let resp = client.do_range("hello").with_prefix().finish().await.unwrap();
+    /// ```no_run
+    /// # use etcdv3client::{EtcdClient, EtcdClientError, KvClient};
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), EtcdClientError> {
+    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
+    /// let resp = KvClient::with_client(&client).do_range("hello").with_prefix().finish().await.unwrap();
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn do_range(&mut self, key: impl AsRef<[u8]>) -> DoRange {
         DoRange::new(key, self)
@@ -38,11 +44,16 @@ impl KvClient {
 
     /// It can also do a raw range request:
     ///
-    /// ```rust
+    /// ```no_run
+    /// # use etcdv3client::{EtcdClient, EtcdClientError, KvClient, pb};
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), EtcdClientError> {
+    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
     /// let mut request = pb::RangeRequest::new("hello");
     /// request.count_only = true;
-    /// let resp = client.range(request).await.unwrap();
-    /// ```
+    /// let resp = KvClient::with_client(&client).range(request).await.unwrap();
+    /// # Ok(())
+    /// # }
     pub async fn range(&mut self, request: pb::RangeRequest) -> Result<pb::RangeResponse> {
         Ok(self.inner.range(request).await?.into_inner())
     }
@@ -87,9 +98,15 @@ impl KvClient {
     }
 
     /// Do put request
-    /// ```rust
-    /// client.do_put("hello", "world").finish().await.unwrap();
-    /// ```
+    ///
+    /// ```no_run
+    /// # use etcdv3client::{EtcdClient, EtcdClientError, KvClient, pb};
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), EtcdClientError> {
+    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
+    /// let resp = KvClient::with_client(&client).do_put("hello", "world").with_prev_kv().finish().await.unwrap();
+    /// # Ok(())
+    /// # }
     pub fn do_put(&mut self, key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> DoPut {
         DoPut::new(key, value, self)
     }
@@ -104,9 +121,15 @@ impl KvClient {
     }
 
     /// Do delete range request
-    /// ```rust
-    /// client.do_delete_range("hello").finish().await.unwrap();
-    /// ```
+    ///
+    /// ```no_run
+    /// # use etcdv3client::{EtcdClient, EtcdClientError, KvClient, pb};
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), EtcdClientError> {
+    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
+    /// let resp = KvClient::with_client(&client).do_delete_range("hello").with_prefix().finish().await.unwrap();
+    /// # Ok(())
+    /// # }
     pub fn do_delete_range(&mut self, key: impl AsRef<[u8]>) -> DoDeleteRange {
         DoDeleteRange::new(key, self)
     }

@@ -8,4 +8,6 @@ mod kv;
 mod watch;
 
 pub use client::EtcdClient;
-pub use error::{EtcdClientError, WatchError};
+pub use error::EtcdClientError;
+pub use kv::KvClient;
+pub use watch::WatchClient;

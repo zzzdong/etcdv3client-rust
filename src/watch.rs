@@ -33,6 +33,15 @@ impl WatchClient {
     }
 
     /// watch
+    ///
+    /// ```no_run
+    /// # use etcdv3client::{EtcdClient, EtcdClientError, WatchClient};
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), EtcdClientError> {
+    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
+    /// let resp = WatchClient::with_client(&client).do_watch("hello").with_prefix().finish().await.unwrap();
+    /// # Ok(())
+    /// # }
     pub fn do_watch(&mut self, key: impl AsRef<[u8]>) -> DoCreateWatch {
         DoCreateWatch::new(key, &mut self.inner)
     }
