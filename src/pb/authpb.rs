@@ -1,3 +1,8 @@
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct UserAddOptions {
+    #[prost(bool, tag = "1")]
+    pub no_password: bool,
+}
 /// User is a single entry in the bucket authUsers
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct User {
@@ -7,6 +12,8 @@ pub struct User {
     pub password: std::vec::Vec<u8>,
     #[prost(string, repeated, tag = "3")]
     pub roles: ::std::vec::Vec<std::string::String>,
+    #[prost(message, optional, tag = "4")]
+    pub options: ::std::option::Option<UserAddOptions>,
 }
 /// Permission is a single entity
 #[derive(Clone, PartialEq, ::prost::Message)]

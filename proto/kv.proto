@@ -2,6 +2,7 @@ syntax = "proto3";
 package mvccpb;
 
 
+
 message KeyValue {
   // key is the key in bytes. An empty key is not allowed.
   bytes key = 1;

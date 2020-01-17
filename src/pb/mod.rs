@@ -1,12 +1,12 @@
-mod mvccpb {
+pub(crate) mod mvccpb {
     include!("mvccpb.rs");
 }
 
-mod authpb {
+pub(crate) mod authpb {
     include!("authpb.rs");
 }
 
-mod etcdserverpb {
+pub(crate) mod etcdserverpb {
     include!("etcdserverpb.rs");
 }
 

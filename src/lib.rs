@@ -1,8 +1,11 @@
 mod client;
 mod error;
 pub mod pb;
-mod watcher;
+mod utils;
+
+mod auth;
+mod kv;
+mod watch;
 
 pub use client::EtcdClient;
 pub use error::{EtcdClientError, WatchError};
-pub use watcher::Watcher;
