@@ -1,12 +1,14 @@
 use std::fmt;
 
+use tokio::sync::mpsc::{channel, Sender};
+use tonic::codec::Streaming;
+use tonic::transport::channel::Channel;
+
 use crate::error::{LeaseError, Result};
 use crate::pb::{self, lease_client::LeaseClient as PbLeaseClient};
 use crate::EtcdClient;
 
-use tokio::sync::mpsc::{channel, Sender};
-use tonic::codec::Streaming;
-use tonic::transport::channel::Channel;
+use helper::*;
 
 const MPSC_CHANNEL_SIZE: usize = 1;
 
@@ -30,29 +32,12 @@ impl LeaseClient {
         Self::new(channel, interceptor)
     }
 
-    /// LeaseGrant creates a lease which expires if the server
-    /// does not receive a keepAlive within a given time to live period.
-    pub async fn lease_grant(
-        &mut self,
-        request: pb::LeaseGrantRequest,
-    ) -> Result<pb::LeaseGrantResponse> {
-        Ok(self.inner.lease_grant(request).await?.into_inner())
-    }
-
-    pub fn do_grant(&mut self, ttl: i64) -> DoLeaseGrant {
-        DoLeaseGrant::new(ttl, self)
+    pub fn do_grant(&mut self, ttl: i64) -> DoLeaseGrantRequest {
+        DoLeaseGrantRequest::new(ttl, self)
     }
 
     pub async fn grant(&mut self, ttl: i64, lease_id: i64) -> Result<pb::LeaseGrantResponse> {
         self.do_grant(ttl).with_lease_id(lease_id).finish().await
-    }
-
-    /// LeaseRevoke revokes a lease.
-    pub async fn lease_revoke(
-        &mut self,
-        request: pb::LeaseRevokeRequest,
-    ) -> Result<pb::LeaseRevokeResponse> {
-        Ok(self.inner.lease_revoke(request).await?.into_inner())
     }
 
     pub async fn revoke(&mut self, lease_id: i64) -> Result<()> {
@@ -72,35 +57,19 @@ impl LeaseClient {
         DoLeaseKeepAlive::new(lease_id, self)
     }
 
-    /// Keep the lease alive.allo
+    /// Keep the lease alive.
     /// When call, it sent the first keep alive message and return LeaseKeepAliver for further call.
     pub async fn keep_alive(&mut self, lease_id: i64) -> Result<LeaseKeepAliver> {
         self.do_keep_alive(lease_id).finish().await
     }
 
-    /// LeaseTimeToLive retrieves lease information.
-    pub async fn lease_time_to_live(
-        &mut self,
-        request: pb::LeaseTimeToLiveRequest,
-    ) -> Result<pb::LeaseTimeToLiveResponse> {
-        Ok(self.inner.lease_time_to_live(request).await?.into_inner())
-    }
-
-    pub async fn get_info(
+    pub async fn get_lease_info(
         &mut self,
         lease_id: i64,
         keys: bool,
     ) -> Result<pb::LeaseTimeToLiveResponse> {
         self.lease_time_to_live(pb::LeaseTimeToLiveRequest::new(lease_id, keys))
             .await
-    }
-
-    /// LeaseLeases lists all existing leases.
-    pub async fn lease_leases(
-        &mut self,
-        request: pb::LeaseLeasesRequest,
-    ) -> Result<pb::LeaseLeasesResponse> {
-        Ok(self.inner.lease_leases(request).await?.into_inner())
     }
 
     pub async fn list(&mut self) -> Result<pb::LeaseLeasesResponse> {
@@ -114,35 +83,17 @@ impl pb::LeaseGrantRequest {
     }
 }
 
-pub struct DoLeaseGrant<'a> {
-    pub request: pb::LeaseGrantRequest,
-    client: &'a mut LeaseClient,
-}
-
-impl<'a> DoLeaseGrant<'a> {
+impl<'a> DoLeaseGrantRequest<'a> {
     pub fn new(ttl: i64, client: &'a mut LeaseClient) -> Self {
-        DoLeaseGrant {
+        DoLeaseGrantRequest {
             request: pb::LeaseGrantRequest::new(ttl, 0),
             client,
         }
     }
 
-    pub async fn finish(self) -> Result<pb::LeaseGrantResponse> {
-        let DoLeaseGrant { request, client } = self;
-        client.lease_grant(request).await
-    }
-
     pub fn with_lease_id(mut self, lease_id: i64) -> Self {
         self.request.id = lease_id;
         self
-    }
-}
-
-impl<'a> fmt::Debug for DoLeaseGrant<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("DoLeaseGrant")
-            .field("request", &self.request)
-            .finish()
     }
 }
 
@@ -246,4 +197,12 @@ impl pb::LeaseLeasesRequest {
     fn new() -> Self {
         pb::LeaseLeasesRequest {}
     }
+}
+
+mod helper {
+    use crate::error::Result;
+    use crate::lease::LeaseClient;
+    use crate::pb;
+
+    include!("pb/lease_helper.rs");
 }

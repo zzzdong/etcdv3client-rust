@@ -126,12 +126,13 @@ impl EtcdClient {
         self.lease.keep_alive(lease_id).await
     }
 
+    /// Get a lease info
     pub async fn get_lease_info(
         &mut self,
         lease_id: i64,
         keys: bool,
     ) -> Result<pb::LeaseTimeToLiveResponse> {
-        self.lease.get_info(lease_id, keys).await
+        self.lease.get_lease_info(lease_id, keys).await
     }
 
     /// List all leases
@@ -145,14 +146,7 @@ async fn get_token(endpoint: impl AsRef<str>, name: &str, password: &str) -> Res
 
     let mut auth_client = AuthClient::new(channel, None);
 
-    let req = crate::pb::AuthenticateRequest {
-        name: name.to_string(),
-        password: password.to_string(),
-    };
-
-    let resp = auth_client.do_authenticate(req).await?;
-
-    Ok(resp.token)
+    auth_client.get_token(name, password).await
 }
 
 async fn new_channel(endpoints: Vec<impl AsRef<str>>) -> Result<Channel> {

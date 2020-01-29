@@ -1,11 +1,11 @@
-use std::fmt;
-
 use tonic::transport::channel::Channel;
 
 use crate::error::{EtcdClientError, Result};
 use crate::pb::{self, kv_client::KvClient as PbKvClient};
 use crate::utils::build_prefix_end;
 use crate::EtcdClient;
+
+use helper::*;
 
 pub struct KvClient {
     inner: PbKvClient<Channel>,
@@ -38,24 +38,8 @@ impl KvClient {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn do_range(&mut self, key: impl AsRef<[u8]>) -> DoRange {
-        DoRange::new(key, self)
-    }
-
-    /// It can also do a raw range request:
-    ///
-    /// ```no_run
-    /// # use etcdv3client::{EtcdClient, EtcdClientError, KvClient, pb};
-    /// # #[tokio::main]
-    /// # async fn main() -> Result<(), EtcdClientError> {
-    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
-    /// let mut request = pb::RangeRequest::new("hello");
-    /// request.count_only = true;
-    /// let resp = KvClient::with_client(&client).range(request).await.unwrap();
-    /// # Ok(())
-    /// # }
-    pub async fn range(&mut self, request: pb::RangeRequest) -> Result<pb::RangeResponse> {
-        Ok(self.inner.range(request).await?.into_inner())
+    pub fn do_range(&mut self, key: impl AsRef<[u8]>) -> DoRangeRequest {
+        DoRangeRequest::new(key, self)
     }
 
     /// Get value by key
@@ -90,7 +74,7 @@ impl KvClient {
     pub async fn all(&mut self) -> Result<Vec<pb::KeyValue>> {
         let resp = self
             .do_range([0x00])
-            .with_range_end([0x00])
+            .with_range_end(vec![0x00])
             .finish()
             .await?;
 
@@ -104,15 +88,11 @@ impl KvClient {
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), EtcdClientError> {
     /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
-    /// let resp = KvClient::with_client(&client).do_put("hello", "world").with_prev_kv().finish().await.unwrap();
+    /// let resp = KvClient::with_client(&client).do_put("hello", "world").with_prev_kv(true).finish().await.unwrap();
     /// # Ok(())
     /// # }
-    pub fn do_put(&mut self, key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> DoPut {
-        DoPut::new(key, value, self)
-    }
-
-    pub async fn put(&mut self, request: pb::PutRequest) -> Result<pb::PutResponse> {
-        Ok(self.inner.put(request).await?.into_inner())
+    pub fn do_put(&mut self, key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> DoPutRequest {
+        DoPutRequest::new(key, value, self)
     }
 
     /// Put a key-value paire
@@ -130,15 +110,8 @@ impl KvClient {
     /// let resp = KvClient::with_client(&client).do_delete_range("hello").with_prefix().finish().await.unwrap();
     /// # Ok(())
     /// # }
-    pub fn do_delete_range(&mut self, key: impl AsRef<[u8]>) -> DoDeleteRange {
-        DoDeleteRange::new(key, self)
-    }
-
-    pub async fn delete_range(
-        &mut self,
-        request: pb::DeleteRangeRequest,
-    ) -> Result<pb::DeleteRangeResponse> {
-        Ok(self.inner.delete_range(request).await?.into_inner())
+    pub fn do_delete_range(&mut self, key: impl AsRef<[u8]>) -> DoDeleteRangeRequest {
+        DoDeleteRangeRequest::new(key, self)
     }
 
     /// Delete a key-value paire
@@ -146,19 +119,17 @@ impl KvClient {
         self.do_delete_range(key).finish().await.map(|_| ())
     }
 
-    pub fn do_txn(&mut self) -> DoTxn {
-        DoTxn::new(self)
+    pub fn do_txn(&mut self) -> DoTxnRequest {
+        DoTxnRequest::new(self)
     }
 
-    /// Txn processes multiple requests in a single transaction.
-    pub async fn txn(&mut self, request: pb::TxnRequest) -> Result<pb::TxnResponse> {
-        Ok(self.inner.txn(request).await?.into_inner())
+    pub fn do_compaction(&mut self, revision: i64, physical: bool) -> DoCompactionRequest {
+        DoCompactionRequest::new(revision, physical, self)
     }
 
     /// Compact compacts the event history in the etcd key-value store.
-    pub async fn compact(&mut self, revision: i64, physical: bool) -> Result<()> {
-        let req = pb::CompactionRequest::new(revision, physical);
-        let _resp = self.inner.compact(req).await?.into_inner();
+    pub async fn compact_history(&mut self, revision: i64, physical: bool) -> Result<()> {
+        let _resp = self.do_compaction(revision, physical).finish().await?;
         Ok(())
     }
 }
@@ -172,60 +143,18 @@ impl pb::RangeRequest {
     }
 }
 
-pub struct DoRange<'a> {
-    pub request: pb::RangeRequest,
-    client: &'a mut KvClient,
-}
-
-impl<'a> DoRange<'a> {
+impl<'a> DoRangeRequest<'a> {
     pub fn new(key: impl AsRef<[u8]>, client: &'a mut KvClient) -> Self {
-        DoRange {
+        DoRangeRequest {
             request: pb::RangeRequest::new(key),
             client,
         }
-    }
-
-    pub async fn finish(self) -> Result<pb::RangeResponse> {
-        let DoRange { request, client } = self;
-        client.range(request).await
-    }
-
-    /// The key range end to fetch.
-    pub fn with_range_end(mut self, end: impl AsRef<[u8]>) -> Self {
-        self.request.range_end = end.as_ref().to_vec();
-        self
     }
 
     /// Get with key prefix.
     pub fn with_prefix(mut self) -> Self {
         self.request.range_end = build_prefix_end(&self.request.key);
         self
-    }
-
-    /// The maximum number of keys returned for the request. When limit is set to 0, it is treated as no limit.
-    pub fn with_limit(mut self, limit: i64) -> Self {
-        self.request.limit = limit;
-        self
-    }
-
-    /// Return only the keys and not the values.
-    pub fn with_keys_only(mut self) -> Self {
-        self.request.keys_only = true;
-        self
-    }
-
-    /// Return only the count of the keys in the range.
-    pub fn with_count_only(mut self) -> Self {
-        self.request.count_only = true;
-        self
-    }
-}
-
-impl<'a> fmt::Debug for DoRange<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("RunRange")
-            .field("request", &self.request)
-            .finish()
     }
 }
 
@@ -239,42 +168,12 @@ impl pb::PutRequest {
     }
 }
 
-pub struct DoPut<'a> {
-    pub request: pb::PutRequest,
-    client: &'a mut KvClient,
-}
-
-impl<'a> DoPut<'a> {
+impl<'a> DoPutRequest<'a> {
     pub fn new(key: impl AsRef<[u8]>, value: impl AsRef<[u8]>, client: &'a mut KvClient) -> Self {
-        DoPut {
+        DoPutRequest {
             request: pb::PutRequest::new(key, value),
             client,
         }
-    }
-
-    pub async fn finish(self) -> Result<pb::PutResponse> {
-        let DoPut { request, client } = self;
-        client.put(request).await
-    }
-
-    /// The lease ID to associate with the key in the key-value store. A lease value of 0 indicates no lease.
-    pub fn with_lease(mut self, lease: i64) -> Self {
-        self.request.lease = lease;
-        self
-    }
-
-    ///  When set, responds with the key-value pair data before the update from this Put request.
-    pub fn with_prev_kv(mut self) -> Self {
-        self.request.prev_kv = true;
-        self
-    }
-}
-
-impl<'a> fmt::Debug for DoPut<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("RunPut")
-            .field("request", &self.request)
-            .finish()
     }
 }
 
@@ -287,48 +186,18 @@ impl pb::DeleteRangeRequest {
     }
 }
 
-pub struct DoDeleteRange<'a> {
-    pub request: pb::DeleteRangeRequest,
-    client: &'a mut KvClient,
-}
-
-impl<'a> DoDeleteRange<'a> {
+impl<'a> DoDeleteRangeRequest<'a> {
     pub fn new(key: impl AsRef<[u8]>, client: &'a mut KvClient) -> Self {
-        DoDeleteRange {
+        DoDeleteRangeRequest {
             request: pb::DeleteRangeRequest::new(key),
             client,
         }
-    }
-
-    pub async fn finish(self) -> Result<pb::DeleteRangeResponse> {
-        let DoDeleteRange { request, client } = self;
-        client.delete_range(request).await
-    }
-
-    /// The key range end to delete.
-    pub fn with_range_end(mut self, end: impl AsRef<[u8]>) -> Self {
-        self.request.range_end = end.as_ref().to_vec();
-        self
     }
 
     /// Delete key-value pairs with key prefix.
     pub fn with_prefix(mut self) -> Self {
         self.request.range_end = build_prefix_end(&self.request.key);
         self
-    }
-
-    ///  When set, responds with the key-value pair data before the update from this Put request.
-    pub fn with_prev_kv(mut self) -> Self {
-        self.request.prev_kv = true;
-        self
-    }
-}
-
-impl<'a> fmt::Debug for DoDeleteRange<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("RunDeleteRange")
-            .field("request", &self.request)
-            .finish()
     }
 }
 
@@ -427,24 +296,19 @@ impl From<pb::TxnRequest> for pb::RequestOp {
     }
 }
 
-pub struct DoTxn<'a> {
+pub struct DoTxnRequest<'a> {
     pub request: pb::TxnRequest,
     client: &'a mut KvClient,
 }
 
-impl<'a> DoTxn<'a> {
+impl<'a> DoTxnRequest<'a> {
     pub fn new(client: &'a mut KvClient) -> Self {
-        DoTxn {
+        DoTxnRequest {
             request: pb::TxnRequest {
                 ..Default::default()
             },
             client,
         }
-    }
-
-    pub async fn finish(self) -> Result<pb::TxnResponse> {
-        let DoTxn { request, client } = self;
-        client.txn(request).await
     }
 
     pub fn with_if(mut self, cmps: Vec<pb::Compare>) -> Self {
@@ -467,4 +331,21 @@ impl pb::CompactionRequest {
     pub fn new(revision: i64, physical: bool) -> Self {
         pb::CompactionRequest { revision, physical }
     }
+}
+
+impl<'a> DoCompactionRequest<'a> {
+    pub fn new(revision: i64, physical: bool, client: &'a mut KvClient) -> Self {
+        DoCompactionRequest {
+            request: pb::CompactionRequest::new(revision, physical),
+            client,
+        }
+    }
+}
+
+mod helper {
+    use crate::error::Result;
+    use crate::kv::KvClient;
+    use crate::pb;
+
+    include!("pb/kv_helper.rs");
 }

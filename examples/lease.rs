@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use tokio::time::delay_for;
 
-use etcdv3client::{EtcdClient, EtcdClientError, LeaseKeepAliver};
+use etcdv3client::{EtcdClient, EtcdClientError};
 
 #[tokio::main]
 async fn main() -> Result<(), EtcdClientError> {
