@@ -29,6 +29,12 @@ pub struct DoLeaseGrantRequest<'a> {
     pub(crate) client: &'a mut LeaseClient,
 }
 impl<'a> DoLeaseGrantRequest<'a> {
+    pub fn from_client(client: &'a mut LeaseClient) -> Self {
+        DoLeaseGrantRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::LeaseGrantResponse> {
         let DoLeaseGrantRequest { request, client } = self;
         client.lease_grant(request).await
@@ -47,6 +53,12 @@ pub struct DoLeaseRevokeRequest<'a> {
     pub(crate) client: &'a mut LeaseClient,
 }
 impl<'a> DoLeaseRevokeRequest<'a> {
+    pub fn from_client(client: &'a mut LeaseClient) -> Self {
+        DoLeaseRevokeRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::LeaseRevokeResponse> {
         let DoLeaseRevokeRequest { request, client } = self;
         client.lease_revoke(request).await
@@ -61,6 +73,12 @@ pub struct DoLeaseTimeToLiveRequest<'a> {
     pub(crate) client: &'a mut LeaseClient,
 }
 impl<'a> DoLeaseTimeToLiveRequest<'a> {
+    pub fn from_client(client: &'a mut LeaseClient) -> Self {
+        DoLeaseTimeToLiveRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::LeaseTimeToLiveResponse> {
         let DoLeaseTimeToLiveRequest { request, client } = self;
         client.lease_time_to_live(request).await
@@ -79,6 +97,12 @@ pub struct DoLeaseLeasesRequest<'a> {
     pub(crate) client: &'a mut LeaseClient,
 }
 impl<'a> DoLeaseLeasesRequest<'a> {
+    pub fn from_client(client: &'a mut LeaseClient) -> Self {
+        DoLeaseLeasesRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::LeaseLeasesResponse> {
         let DoLeaseLeasesRequest { request, client } = self;
         client.lease_leases(request).await

@@ -26,6 +26,12 @@ pub struct DoRangeRequest<'a> {
     pub(crate) client: &'a mut KvClient,
 }
 impl<'a> DoRangeRequest<'a> {
+    pub fn from_client(client: &'a mut KvClient) -> Self {
+        DoRangeRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::RangeResponse> {
         let DoRangeRequest { request, client } = self;
         client.range(request).await
@@ -88,6 +94,12 @@ pub struct DoPutRequest<'a> {
     pub(crate) client: &'a mut KvClient,
 }
 impl<'a> DoPutRequest<'a> {
+    pub fn from_client(client: &'a mut KvClient) -> Self {
+        DoPutRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::PutResponse> {
         let DoPutRequest { request, client } = self;
         client.put(request).await
@@ -122,6 +134,12 @@ pub struct DoDeleteRangeRequest<'a> {
     pub(crate) client: &'a mut KvClient,
 }
 impl<'a> DoDeleteRangeRequest<'a> {
+    pub fn from_client(client: &'a mut KvClient) -> Self {
+        DoDeleteRangeRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::DeleteRangeResponse> {
         let DoDeleteRangeRequest { request, client } = self;
         client.delete_range(request).await
@@ -144,6 +162,12 @@ pub struct DoTxnRequest<'a> {
     pub(crate) client: &'a mut KvClient,
 }
 impl<'a> DoTxnRequest<'a> {
+    pub fn from_client(client: &'a mut KvClient) -> Self {
+        DoTxnRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::TxnResponse> {
         let DoTxnRequest { request, client } = self;
         client.txn(request).await
@@ -154,6 +178,12 @@ pub struct DoCompactionRequest<'a> {
     pub(crate) client: &'a mut KvClient,
 }
 impl<'a> DoCompactionRequest<'a> {
+    pub fn from_client(client: &'a mut KvClient) -> Self {
+        DoCompactionRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::CompactionResponse> {
         let DoCompactionRequest { request, client } = self;
         client.compact(request).await

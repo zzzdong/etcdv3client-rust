@@ -109,6 +109,12 @@ pub struct DoAuthEnableRequest<'a> {
     pub(crate) client: &'a mut AuthClient,
 }
 impl<'a> DoAuthEnableRequest<'a> {
+    pub fn from_client(client: &'a mut AuthClient) -> Self {
+        DoAuthEnableRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::AuthEnableResponse> {
         let DoAuthEnableRequest { request, client } = self;
         client.auth_enable(request).await
@@ -119,6 +125,12 @@ pub struct DoAuthDisableRequest<'a> {
     pub(crate) client: &'a mut AuthClient,
 }
 impl<'a> DoAuthDisableRequest<'a> {
+    pub fn from_client(client: &'a mut AuthClient) -> Self {
+        DoAuthDisableRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::AuthDisableResponse> {
         let DoAuthDisableRequest { request, client } = self;
         client.auth_disable(request).await
@@ -129,6 +141,12 @@ pub struct DoAuthenticateRequest<'a> {
     pub(crate) client: &'a mut AuthClient,
 }
 impl<'a> DoAuthenticateRequest<'a> {
+    pub fn from_client(client: &'a mut AuthClient) -> Self {
+        DoAuthenticateRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::AuthenticateResponse> {
         let DoAuthenticateRequest { request, client } = self;
         client.authenticate(request).await
@@ -147,6 +165,12 @@ pub struct DoAuthUserAddRequest<'a> {
     pub(crate) client: &'a mut AuthClient,
 }
 impl<'a> DoAuthUserAddRequest<'a> {
+    pub fn from_client(client: &'a mut AuthClient) -> Self {
+        DoAuthUserAddRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::AuthUserAddResponse> {
         let DoAuthUserAddRequest { request, client } = self;
         client.user_add(request).await
@@ -165,6 +189,12 @@ pub struct DoAuthUserGetRequest<'a> {
     pub(crate) client: &'a mut AuthClient,
 }
 impl<'a> DoAuthUserGetRequest<'a> {
+    pub fn from_client(client: &'a mut AuthClient) -> Self {
+        DoAuthUserGetRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::AuthUserGetResponse> {
         let DoAuthUserGetRequest { request, client } = self;
         client.user_get(request).await
@@ -179,6 +209,12 @@ pub struct DoAuthUserListRequest<'a> {
     pub(crate) client: &'a mut AuthClient,
 }
 impl<'a> DoAuthUserListRequest<'a> {
+    pub fn from_client(client: &'a mut AuthClient) -> Self {
+        DoAuthUserListRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::AuthUserListResponse> {
         let DoAuthUserListRequest { request, client } = self;
         client.user_list(request).await
@@ -189,6 +225,12 @@ pub struct DoAuthUserDeleteRequest<'a> {
     pub(crate) client: &'a mut AuthClient,
 }
 impl<'a> DoAuthUserDeleteRequest<'a> {
+    pub fn from_client(client: &'a mut AuthClient) -> Self {
+        DoAuthUserDeleteRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::AuthUserDeleteResponse> {
         let DoAuthUserDeleteRequest { request, client } = self;
         client.user_delete(request).await
@@ -203,6 +245,12 @@ pub struct DoAuthUserChangePasswordRequest<'a> {
     pub(crate) client: &'a mut AuthClient,
 }
 impl<'a> DoAuthUserChangePasswordRequest<'a> {
+    pub fn from_client(client: &'a mut AuthClient) -> Self {
+        DoAuthUserChangePasswordRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::AuthUserChangePasswordResponse> {
         let DoAuthUserChangePasswordRequest { request, client } = self;
         client.user_change_password(request).await
@@ -221,6 +269,12 @@ pub struct DoAuthUserGrantRoleRequest<'a> {
     pub(crate) client: &'a mut AuthClient,
 }
 impl<'a> DoAuthUserGrantRoleRequest<'a> {
+    pub fn from_client(client: &'a mut AuthClient) -> Self {
+        DoAuthUserGrantRoleRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::AuthUserGrantRoleResponse> {
         let DoAuthUserGrantRoleRequest { request, client } = self;
         client.user_grant_role(request).await
@@ -239,6 +293,12 @@ pub struct DoAuthUserRevokeRoleRequest<'a> {
     pub(crate) client: &'a mut AuthClient,
 }
 impl<'a> DoAuthUserRevokeRoleRequest<'a> {
+    pub fn from_client(client: &'a mut AuthClient) -> Self {
+        DoAuthUserRevokeRoleRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::AuthUserRevokeRoleResponse> {
         let DoAuthUserRevokeRoleRequest { request, client } = self;
         client.user_revoke_role(request).await
@@ -257,6 +317,12 @@ pub struct DoAuthRoleAddRequest<'a> {
     pub(crate) client: &'a mut AuthClient,
 }
 impl<'a> DoAuthRoleAddRequest<'a> {
+    pub fn from_client(client: &'a mut AuthClient) -> Self {
+        DoAuthRoleAddRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::AuthRoleAddResponse> {
         let DoAuthRoleAddRequest { request, client } = self;
         client.role_add(request).await
@@ -271,6 +337,12 @@ pub struct DoAuthRoleGetRequest<'a> {
     pub(crate) client: &'a mut AuthClient,
 }
 impl<'a> DoAuthRoleGetRequest<'a> {
+    pub fn from_client(client: &'a mut AuthClient) -> Self {
+        DoAuthRoleGetRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::AuthRoleGetResponse> {
         let DoAuthRoleGetRequest { request, client } = self;
         client.role_get(request).await
@@ -285,6 +357,12 @@ pub struct DoAuthRoleListRequest<'a> {
     pub(crate) client: &'a mut AuthClient,
 }
 impl<'a> DoAuthRoleListRequest<'a> {
+    pub fn from_client(client: &'a mut AuthClient) -> Self {
+        DoAuthRoleListRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::AuthRoleListResponse> {
         let DoAuthRoleListRequest { request, client } = self;
         client.role_list(request).await
@@ -295,6 +373,12 @@ pub struct DoAuthRoleDeleteRequest<'a> {
     pub(crate) client: &'a mut AuthClient,
 }
 impl<'a> DoAuthRoleDeleteRequest<'a> {
+    pub fn from_client(client: &'a mut AuthClient) -> Self {
+        DoAuthRoleDeleteRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::AuthRoleDeleteResponse> {
         let DoAuthRoleDeleteRequest { request, client } = self;
         client.role_delete(request).await
@@ -309,6 +393,12 @@ pub struct DoAuthRoleGrantPermissionRequest<'a> {
     pub(crate) client: &'a mut AuthClient,
 }
 impl<'a> DoAuthRoleGrantPermissionRequest<'a> {
+    pub fn from_client(client: &'a mut AuthClient) -> Self {
+        DoAuthRoleGrantPermissionRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::AuthRoleGrantPermissionResponse> {
         let DoAuthRoleGrantPermissionRequest { request, client } = self;
         client.role_grant_permission(request).await
@@ -323,6 +413,12 @@ pub struct DoAuthRoleRevokePermissionRequest<'a> {
     pub(crate) client: &'a mut AuthClient,
 }
 impl<'a> DoAuthRoleRevokePermissionRequest<'a> {
+    pub fn from_client(client: &'a mut AuthClient) -> Self {
+        DoAuthRoleRevokePermissionRequest {
+            request: Default::default(),
+            client,
+        }
+    }
     pub async fn finish(self) -> Result<pb::AuthRoleRevokePermissionResponse> {
         let DoAuthRoleRevokePermissionRequest { request, client } = self;
         client.role_revoke_permission(request).await
