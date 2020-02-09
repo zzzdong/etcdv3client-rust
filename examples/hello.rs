@@ -13,11 +13,11 @@ async fn main() -> Result<(), EtcdClientError> {
 
     // use convenience api under EtcdClient.
     match client.get(&key).await {
-        Ok(v) => {
+        Ok(Some(v)) => {
             println!("got orignal {} => {:?}", key, String::from_utf8_lossy(&v));
             origin = Some(v.to_vec());
         }
-        Err(EtcdClientError::KeyNotFound) => {
+        Ok(None) => {
             client.put(key, value).await.unwrap();
         }
         Err(e) => {

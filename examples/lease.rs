@@ -38,9 +38,9 @@ async fn main() -> Result<(), EtcdClientError> {
 
     delay_for(Duration::from_secs(3)).await;
     // after 1+3 seconds, lease unavailable
-    let value = client.get_string(key).await;
+    let value = client.get_string(key).await?;
     println!("try get {}: {:?} at {:?}", key, value, start.elapsed());
-    assert_eq!(value.is_err(), true);
+    assert_eq!(value, None);
 
     // another case with keep_alive
     let start = std::time::Instant::now();
@@ -63,9 +63,9 @@ async fn main() -> Result<(), EtcdClientError> {
         }
 
         if elapsed > Duration::from_secs(4) {
-            let value = client.get_string(key).await;
+            let value = client.get_string(key).await?;
             println!("try get {}: {:?} at {:?}", key, value, elapsed);
-            assert_eq!(value.is_ok(), true);
+            assert_eq!(value.is_some(), true);
             println!("after {:?}, {} still alive", elapsed, key);
         }
         aliver.keep_alive().await?;

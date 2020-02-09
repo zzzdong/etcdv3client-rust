@@ -24,8 +24,6 @@ pub enum EtcdClientError {
     TransportError(#[from] tonic::transport::Error),
     #[error("error message: {0}")]
     ErrMsg(String),
-    #[error("key not found")]
-    KeyNotFound,
     #[error("endpoint error")]
     EndpointError,
     #[error("watch error")]

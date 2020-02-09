@@ -44,21 +44,26 @@ impl KvClient {
 
     /// Get value by key
     #[inline]
-    pub async fn get(&mut self, key: impl AsRef<[u8]>) -> Result<Vec<u8>> {
+    pub async fn get(&mut self, key: impl AsRef<[u8]>) -> Result<Option<Vec<u8>>> {
         let resp = self.do_range(key).finish().await?;
-        let kv = resp
-            .kvs
-            .first()
-            .ok_or_else(|| EtcdClientError::KeyNotFound)?;
-        Ok(kv.value.clone())
+        let kv = resp.kvs.first();
+        Ok(kv.map(|kv| kv.value.clone()))
     }
 
     /// Get string by key
     #[inline]
-    pub async fn get_string(&mut self, key: impl AsRef<[u8]>) -> Result<String> {
+    pub async fn get_string(&mut self, key: impl AsRef<[u8]>) -> Result<Option<String>> {
         let value = self.get(key).await?;
 
-        String::from_utf8(value).map_err(EtcdClientError::FromUtf8)
+        let val = match value {
+            Some(v) => {
+                let s = String::from_utf8(v).map_err(EtcdClientError::FromUtf8)?;
+                Some(s)
+            }
+            None => None,
+        };
+
+        Ok(val)
     }
 
     /// Get key-value pairs with prefix
