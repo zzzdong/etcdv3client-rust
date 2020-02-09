@@ -175,6 +175,8 @@ impl<'a> DoAuthUserGetRequest<'a> {
 }
 
 mod helper {
+    #![allow(dead_code)]
+
     use crate::auth::AuthClient;
     use crate::error::Result;
     use crate::pb;

@@ -200,6 +200,8 @@ impl pb::LeaseLeasesRequest {
 }
 
 mod helper {
+    #![allow(dead_code)]
+
     use crate::error::Result;
     use crate::lease::LeaseClient;
     use crate::pb;

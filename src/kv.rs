@@ -301,11 +301,6 @@ impl From<pb::TxnRequest> for pb::RequestOp {
     }
 }
 
-pub struct DoTxnRequest<'a> {
-    pub request: pb::TxnRequest,
-    client: &'a mut KvClient,
-}
-
 impl<'a> DoTxnRequest<'a> {
     pub fn new(client: &'a mut KvClient) -> Self {
         DoTxnRequest {
@@ -348,6 +343,8 @@ impl<'a> DoCompactionRequest<'a> {
 }
 
 mod helper {
+    #![allow(dead_code)]
+
     use crate::error::Result;
     use crate::kv::KvClient;
     use crate::pb;
