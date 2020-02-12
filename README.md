@@ -20,7 +20,7 @@ Examples can be found in [`examples`].
 
 - [x] KV
 - [x] Watch
-- [ ] Lease
+- [x] Lease
 - [ ] Cluster
 - [ ] Maintenance
 - [ ] Auth
