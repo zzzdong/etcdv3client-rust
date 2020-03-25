@@ -977,7 +977,7 @@ pub enum AlarmType {
     /// kv store corruption detected
     Corrupt = 2,
 }
-#[doc = r" Generated server implementations."]
+#[doc = r" Generated client implementations."]
 pub mod kv_client {
     #![allow(unused_variables, dead_code, missing_docs)]
     use tonic::codegen::*;
@@ -1103,7 +1103,7 @@ pub mod kv_client {
         }
     }
 }
-#[doc = r" Generated server implementations."]
+#[doc = r" Generated client implementations."]
 pub mod watch_client {
     #![allow(unused_variables, dead_code, missing_docs)]
     use tonic::codegen::*;
@@ -1167,7 +1167,7 @@ pub mod watch_client {
         }
     }
 }
-#[doc = r" Generated server implementations."]
+#[doc = r" Generated client implementations."]
 pub mod lease_client {
     #![allow(unused_variables, dead_code, missing_docs)]
     use tonic::codegen::*;
@@ -1292,7 +1292,7 @@ pub mod lease_client {
         }
     }
 }
-#[doc = r" Generated server implementations."]
+#[doc = r" Generated client implementations."]
 pub mod cluster_client {
     #![allow(unused_variables, dead_code, missing_docs)]
     use tonic::codegen::*;
@@ -1409,7 +1409,7 @@ pub mod cluster_client {
         }
     }
 }
-#[doc = r" Generated server implementations."]
+#[doc = r" Generated client implementations."]
 pub mod maintenance_client {
     #![allow(unused_variables, dead_code, missing_docs)]
     use tonic::codegen::*;
@@ -1565,7 +1565,7 @@ pub mod maintenance_client {
         }
     }
 }
-#[doc = r" Generated server implementations."]
+#[doc = r" Generated client implementations."]
 pub mod auth_client {
     #![allow(unused_variables, dead_code, missing_docs)]
     use tonic::codegen::*;
