@@ -72,13 +72,13 @@ impl EtcdClient {
 
     /// Get value by key
     #[inline]
-    pub async fn get(&mut self, key: impl AsRef<[u8]>) -> Result<Option<Vec<u8>>> {
+    pub async fn get(&mut self, key: impl AsRef<[u8]>) -> Result<Vec<u8>> {
         self.kv.get(key).await
     }
 
     /// Get string by key
     #[inline]
-    pub async fn get_string(&mut self, key: impl AsRef<[u8]>) -> Result<Option<String>> {
+    pub async fn get_string(&mut self, key: impl AsRef<[u8]>) -> Result<String> {
         self.kv.get_string(key).await
     }
 
