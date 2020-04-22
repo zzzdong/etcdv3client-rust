@@ -16,6 +16,7 @@ keywords = ["etcd", "async"]
 
 [features]
 default = []
+tls = ["tonic/tls"]
 gen = [ "tonic-build" ]
 
 
@@ -23,12 +24,12 @@ gen = [ "tonic-build" ]
 http = "0.2"
 prost = "0.6"
 thiserror = "1.0"
-tonic = { version = "0.1", features = ["tls"] }
+tonic = { version = "0.2" }
 tokio = { version = "0.2", features = ["default", "stream", "sync"] }
 
 
 [build-dependencies]
-tonic-build = { version = "0.1", optional = true }
+tonic-build = { version = "0.2", optional = true }
 
 
 [dev-dependencies]
