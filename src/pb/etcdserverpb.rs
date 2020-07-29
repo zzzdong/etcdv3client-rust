@@ -1102,6 +1102,11 @@ pub mod kv_client {
             }
         }
     }
+    impl<T> std::fmt::Debug for KvClient<T> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "KvClient {{ ... }}")
+        }
+    }
 }
 #[doc = r" Generated client implementations."]
 pub mod watch_client {
@@ -1164,6 +1169,11 @@ pub mod watch_client {
             Self {
                 inner: self.inner.clone(),
             }
+        }
+    }
+    impl<T> std::fmt::Debug for WatchClient<T> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "WatchClient {{ ... }}")
         }
     }
 }
@@ -1291,6 +1301,11 @@ pub mod lease_client {
             }
         }
     }
+    impl<T> std::fmt::Debug for LeaseClient<T> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "LeaseClient {{ ... }}")
+        }
+    }
 }
 #[doc = r" Generated client implementations."]
 pub mod cluster_client {
@@ -1406,6 +1421,11 @@ pub mod cluster_client {
             Self {
                 inner: self.inner.clone(),
             }
+        }
+    }
+    impl<T> std::fmt::Debug for ClusterClient<T> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "ClusterClient {{ ... }}")
         }
     }
 }
@@ -1562,6 +1582,11 @@ pub mod maintenance_client {
             Self {
                 inner: self.inner.clone(),
             }
+        }
+    }
+    impl<T> std::fmt::Debug for MaintenanceClient<T> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "MaintenanceClient {{ ... }}")
         }
     }
 }
@@ -1849,6 +1874,11 @@ pub mod auth_client {
             Self {
                 inner: self.inner.clone(),
             }
+        }
+    }
+    impl<T> std::fmt::Debug for AuthClient<T> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "AuthClient {{ ... }}")
         }
     }
 }

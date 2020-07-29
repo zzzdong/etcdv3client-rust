@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use etcdv3client::{pb::RangeRequest, EtcdClient, EtcdClientError};
 
 #[tokio::main]
@@ -12,7 +14,7 @@ async fn main() -> Result<(), EtcdClientError> {
     let mut client = EtcdClient::new(vec![endpoint], auth).await?;
 
     // use convenience api under EtcdClient.
-    match client.get(&key).await {
+    match client.get(key).await {
         Ok(v) => {
             println!("got orignal {} => {:?}", key, String::from_utf8_lossy(&v));
             origin = Some(v.to_vec());
@@ -33,6 +35,7 @@ async fn main() -> Result<(), EtcdClientError> {
     let resp = client.kv.range(req).await?;
     println!("got range resp => {:?}", resp);
 
+    let start = Instant::now();
     // try watch api.
     let mut watcher = client.watch(key).await?;
 
@@ -42,10 +45,10 @@ async fn main() -> Result<(), EtcdClientError> {
     // read the watch event
     let mut n: i32 = 0;
     while let Some(w) = watcher.message().await? {
-        println!("[{}] watch got => {:?}", n, w);
+        println!("[{:?}] [{}] watch got => {:?}", start.elapsed(), n, w);
 
         if w.canceled {
-            println!("watch cancaled, exit...");
+            println!("[{:?}] watch cancaled, exit...", start.elapsed());
             break;
         }
 
@@ -55,7 +58,7 @@ async fn main() -> Result<(), EtcdClientError> {
 
         if n > 1 {
             watcher.cancel().await?;
-            println!("sent cancel at {}", n);
+            println!("[{:?}] sent cancel at {}", start.elapsed(), n);
         }
 
         n += 1;

@@ -24,12 +24,12 @@ gen = [ "tonic-build" ]
 http = "0.2"
 prost = "0.6"
 thiserror = "1.0"
-tonic = { version = "0.2" }
+tonic = { version = "0.3" }
 tokio = { version = "0.2", features = ["default", "stream", "sync"] }
 
 
 [build-dependencies]
-tonic-build = { version = "0.2", optional = true }
+tonic-build = { version = "0.3", optional = true }
 
 
 [dev-dependencies]

@@ -54,6 +54,16 @@ impl KvClient {
     }
 
     /// Get string by key
+    ///
+    /// ```no_run
+    /// # use etcdv3client::{EtcdClient, EtcdClientError, KvClient};
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), EtcdClientError> {
+    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
+    /// let resp = KvClient::with_client(&client).get("hello").await.unwrap();
+    /// # Ok(())
+    /// # }
+    /// ```
     #[inline]
     pub async fn get_string(&mut self, key: impl AsRef<[u8]>) -> Result<String> {
         let value = self.get(key).await?;
