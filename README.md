@@ -1,8 +1,6 @@
 etcdv3client-rust
 ======
 
-NOTE: `etcdv3client` currently under early development, you should NOT use it in production environment.
-
 [![Crates.io](https://img.shields.io/crates/v/etcdv3client)](https://crates.io/crates/etcdv3client)
 [![Documentation](https://docs.rs/etcdv3client/badge.svg)](https://docs.rs/etcdv3client)
 ![Rust](https://github.com/zzzdong/etcdv3client-rust/workflows/Rust/badge.svg)
