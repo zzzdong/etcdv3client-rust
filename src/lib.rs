@@ -1,3 +1,5 @@
+//! A etcdv3 client written in Rust-lang.
+//!
 //! ```rust,no_run
 //! use etcdv3client::{EtcdClient, EtcdClientError};
 //!
