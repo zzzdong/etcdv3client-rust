@@ -1,8 +1,6 @@
 etcdv3client-rust
 ======
 
-NOTE: `etcdv3client` currently under early development, you should NOT use it in production environment.
-
 [![Crates.io](https://img.shields.io/crates/v/etcdv3client)](https://crates.io/crates/etcdv3client)
 [![Documentation](https://docs.rs/etcdv3client/badge.svg)](https://docs.rs/etcdv3client)
 ![Rust](https://github.com/zzzdong/etcdv3client-rust/workflows/Rust/badge.svg)
@@ -12,9 +10,37 @@ NOTE: `etcdv3client` currently under early development, you should NOT use it in
 
 [`etcdv3client`] is a simple etcdv3 client in Rust-lang.
 
-## Getting Started
+## Example
 
-Examples can be found in [`examples`].
+A basic example:
+```rust,no_run
+use etcdv3client::{EtcdClient, EtcdClientError};
+
+#[tokio::main]
+async fn main() -> Result<(), EtcdClientError> {
+    let endpoint = "http://localhost:2379";
+    let auth: Option<(String, String)> = None;
+    let mut client = EtcdClient::new(vec![endpoint], auth).await?;
+
+    let key = "/hello";
+    // use convenience api under EtcdClient.
+    match client.get(key).await {
+        Ok(v) => {
+            println!("got `{}` => {:?}", key, String::from_utf8_lossy(&v));
+        }
+        Err(EtcdClientError::KeyNotFound) => {
+            eprintln!("can not find `{}`", key);
+        }
+        Err(e) => {
+            eprintln!("etcd get error: `{:?}`", e);
+        }
+    }
+
+    Ok(())
+}
+```
+
+More examples can be found in [`examples`].
 
 ## Support APIs
 

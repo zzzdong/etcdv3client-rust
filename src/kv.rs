@@ -46,10 +46,7 @@ impl KvClient {
     #[inline]
     pub async fn get(&mut self, key: impl AsRef<[u8]>) -> Result<Vec<u8>> {
         let resp = self.do_range(key).finish().await?;
-        let kv = resp
-            .kvs
-            .first()
-            .ok_or_else(|| EtcdClientError::KeyNotFound)?;
+        let kv = resp.kvs.first().ok_or(EtcdClientError::KeyNotFound)?;
         Ok(kv.value.clone())
     }
 
