@@ -84,10 +84,11 @@ impl<'a> DoCreateWatch<'a> {
             request_union: Some(create_watch),
         };
 
-        let (mut req_tx, req_rx) = channel::<pb::WatchRequest>(MPSC_CHANNEL_SIZE);
+        let (req_tx, req_rx) = channel::<pb::WatchRequest>(MPSC_CHANNEL_SIZE);
         req_tx.send(create_req).await.map_err(WatchError::from)?;
 
-        let mut resp = client.watch(req_rx).await?;
+        let rx = tokio_stream::wrappers::ReceiverStream::new(req_rx);
+        let mut resp = client.watch(rx).await?;
         let watch_id;
 
         match resp.message().await? {

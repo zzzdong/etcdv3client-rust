@@ -1,8 +1,8 @@
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KeyValue {
     /// key is the key in bytes. An empty key is not allowed.
-    #[prost(bytes, tag = "1")]
-    pub key: std::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "1")]
+    pub key: ::prost::alloc::vec::Vec<u8>,
     /// create_revision is the revision of last creation on this key.
     #[prost(int64, tag = "2")]
     pub create_revision: i64,
@@ -15,8 +15,8 @@ pub struct KeyValue {
     #[prost(int64, tag = "4")]
     pub version: i64,
     /// value is the value held by the key, in bytes.
-    #[prost(bytes, tag = "5")]
-    pub value: std::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "5")]
+    pub value: ::prost::alloc::vec::Vec<u8>,
     /// lease is the ID of the lease that attached to key.
     /// When the attached lease expires, the key will be deleted.
     /// If lease is 0, then no lease is attached to the key.
@@ -36,11 +36,12 @@ pub struct Event {
     /// A DELETE/EXPIRE event contains the deleted key with
     /// its modification revision set to the revision of deletion.
     #[prost(message, optional, tag = "2")]
-    pub kv: ::std::option::Option<KeyValue>,
+    pub kv: ::core::option::Option<KeyValue>,
     /// prev_kv holds the key-value pair before the event happens.
     #[prost(message, optional, tag = "3")]
-    pub prev_kv: ::std::option::Option<KeyValue>,
+    pub prev_kv: ::core::option::Option<KeyValue>,
 }
+/// Nested message and enum types in `Event`.
 pub mod event {
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]

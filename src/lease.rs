@@ -122,12 +122,13 @@ impl<'a> DoLeaseKeepAlive<'a> {
     pub async fn finish(self) -> Result<LeaseKeepAliver> {
         let DoLeaseKeepAlive { lease_id, client } = self;
 
-        let (mut req_tx, req_rx) = channel::<pb::LeaseKeepAliveRequest>(MPSC_CHANNEL_SIZE);
+        let (req_tx, req_rx) = channel::<pb::LeaseKeepAliveRequest>(MPSC_CHANNEL_SIZE);
 
         let request = pb::LeaseKeepAliveRequest::new(lease_id);
         req_tx.send(request).await.map_err(LeaseError::from)?;
 
-        let resp = client.lease_keep_alive(req_rx).await?;
+        let rx = tokio_stream::wrappers::ReceiverStream::new(req_rx);
+        let resp = client.lease_keep_alive(rx).await?;
 
         Ok(LeaseKeepAliver::new(lease_id, req_tx, resp))
     }

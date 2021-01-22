@@ -19,15 +19,15 @@ pub struct ResponseHeader {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RangeRequest {
     /// key is the first key for the range. If range_end is not given, the request only looks up key.
-    #[prost(bytes, tag = "1")]
-    pub key: std::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "1")]
+    pub key: ::prost::alloc::vec::Vec<u8>,
     /// range_end is the upper bound on the requested range [key, range_end).
     /// If range_end is '\0', the range is all keys >= key.
     /// If range_end is key plus one (e.g., "aa"+1 == "ab", "a\xff"+1 == "b"),
     /// then the range request gets all keys prefixed with key.
     /// If both key and range_end are '\0', then the range request returns all keys.
-    #[prost(bytes, tag = "2")]
-    pub range_end: std::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub range_end: ::prost::alloc::vec::Vec<u8>,
     /// limit is a limit on the number of keys returned for the request. When limit is set to 0,
     /// it is treated as no limit.
     #[prost(int64, tag = "3")]
@@ -74,6 +74,7 @@ pub struct RangeRequest {
     #[prost(int64, tag = "13")]
     pub max_create_revision: i64,
 }
+/// Nested message and enum types in `RangeRequest`.
 pub mod range_request {
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
@@ -98,11 +99,11 @@ pub mod range_request {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RangeResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     /// kvs is the list of key-value pairs matched by the range request.
     /// kvs is empty when count is requested.
     #[prost(message, repeated, tag = "2")]
-    pub kvs: ::std::vec::Vec<super::mvccpb::KeyValue>,
+    pub kvs: ::prost::alloc::vec::Vec<super::mvccpb::KeyValue>,
     /// more indicates if there are more keys to return in the requested range.
     #[prost(bool, tag = "3")]
     pub more: bool,
@@ -113,11 +114,11 @@ pub struct RangeResponse {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct PutRequest {
     /// key is the key, in bytes, to put into the key-value store.
-    #[prost(bytes, tag = "1")]
-    pub key: std::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "1")]
+    pub key: ::prost::alloc::vec::Vec<u8>,
     /// value is the value, in bytes, to associate with the key in the key-value store.
-    #[prost(bytes, tag = "2")]
-    pub value: std::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub value: ::prost::alloc::vec::Vec<u8>,
     /// lease is the lease ID to associate with the key in the key-value store. A lease
     /// value of 0 indicates no lease.
     #[prost(int64, tag = "3")]
@@ -138,23 +139,23 @@ pub struct PutRequest {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct PutResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     /// if prev_kv is set in the request, the previous key-value pair will be returned.
     #[prost(message, optional, tag = "2")]
-    pub prev_kv: ::std::option::Option<super::mvccpb::KeyValue>,
+    pub prev_kv: ::core::option::Option<super::mvccpb::KeyValue>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DeleteRangeRequest {
     /// key is the first key to delete in the range.
-    #[prost(bytes, tag = "1")]
-    pub key: std::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "1")]
+    pub key: ::prost::alloc::vec::Vec<u8>,
     /// range_end is the key following the last key to delete for the range [key, range_end).
     /// If range_end is not given, the range is defined to contain only the key argument.
     /// If range_end is one bit larger than the given key, then the range is all the keys
     /// with the prefix (the given key).
     /// If range_end is '\0', the range is all keys greater than or equal to the key argument.
-    #[prost(bytes, tag = "2")]
-    pub range_end: std::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub range_end: ::prost::alloc::vec::Vec<u8>,
     /// If prev_kv is set, etcd gets the previous key-value pairs before deleting it.
     /// The previous key-value pairs will be returned in the delete response.
     #[prost(bool, tag = "3")]
@@ -163,20 +164,21 @@ pub struct DeleteRangeRequest {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DeleteRangeResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     /// deleted is the number of keys deleted by the delete range request.
     #[prost(int64, tag = "2")]
     pub deleted: i64,
     /// if prev_kv is set in the request, the previous key-value pairs will be returned.
     #[prost(message, repeated, tag = "3")]
-    pub prev_kvs: ::std::vec::Vec<super::mvccpb::KeyValue>,
+    pub prev_kvs: ::prost::alloc::vec::Vec<super::mvccpb::KeyValue>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RequestOp {
     /// request is a union of request types accepted by a transaction.
     #[prost(oneof = "request_op::Request", tags = "1, 2, 3, 4")]
-    pub request: ::std::option::Option<request_op::Request>,
+    pub request: ::core::option::Option<request_op::Request>,
 }
+/// Nested message and enum types in `RequestOp`.
 pub mod request_op {
     /// request is a union of request types accepted by a transaction.
     #[derive(Clone, PartialEq, ::prost::Oneof)]
@@ -195,8 +197,9 @@ pub mod request_op {
 pub struct ResponseOp {
     /// response is a union of response types returned by a transaction.
     #[prost(oneof = "response_op::Response", tags = "1, 2, 3, 4")]
-    pub response: ::std::option::Option<response_op::Response>,
+    pub response: ::core::option::Option<response_op::Response>,
 }
+/// Nested message and enum types in `ResponseOp`.
 pub mod response_op {
     /// response is a union of response types returned by a transaction.
     #[derive(Clone, PartialEq, ::prost::Oneof)]
@@ -220,17 +223,18 @@ pub struct Compare {
     #[prost(enumeration = "compare::CompareTarget", tag = "2")]
     pub target: i32,
     /// key is the subject key for the comparison operation.
-    #[prost(bytes, tag = "3")]
-    pub key: std::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "3")]
+    pub key: ::prost::alloc::vec::Vec<u8>,
     /// range_end compares the given target to all keys in the range [key, range_end).
     /// See RangeRequest for more details on key ranges.
     ///
     /// TODO: fill out with most of the rest of RangeRequest fields when needed.
-    #[prost(bytes, tag = "64")]
-    pub range_end: std::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "64")]
+    pub range_end: ::prost::alloc::vec::Vec<u8>,
     #[prost(oneof = "compare::TargetUnion", tags = "4, 5, 6, 7, 8")]
-    pub target_union: ::std::option::Option<compare::TargetUnion>,
+    pub target_union: ::core::option::Option<compare::TargetUnion>,
 }
+/// Nested message and enum types in `Compare`.
 pub mod compare {
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
@@ -262,7 +266,7 @@ pub mod compare {
         ModRevision(i64),
         /// value is the value of the given key, in bytes.
         #[prost(bytes, tag = "7")]
-        Value(std::vec::Vec<u8>),
+        Value(::prost::alloc::vec::Vec<u8>),
         /// lease is the lease id of the given key.
         ///
         /// leave room for more target_union field tags, jump to 64
@@ -293,25 +297,25 @@ pub struct TxnRequest {
     /// If the comparisons fail, then the failure requests will be processed in order,
     /// and the response will contain their respective responses in order.
     #[prost(message, repeated, tag = "1")]
-    pub compare: ::std::vec::Vec<Compare>,
+    pub compare: ::prost::alloc::vec::Vec<Compare>,
     /// success is a list of requests which will be applied when compare evaluates to true.
     #[prost(message, repeated, tag = "2")]
-    pub success: ::std::vec::Vec<RequestOp>,
+    pub success: ::prost::alloc::vec::Vec<RequestOp>,
     /// failure is a list of requests which will be applied when compare evaluates to false.
     #[prost(message, repeated, tag = "3")]
-    pub failure: ::std::vec::Vec<RequestOp>,
+    pub failure: ::prost::alloc::vec::Vec<RequestOp>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TxnResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     /// succeeded is set to true if the compare evaluated to true or false otherwise.
     #[prost(bool, tag = "2")]
     pub succeeded: bool,
     /// responses is a list of responses corresponding to the results from applying
     /// success if succeeded is true or failure if succeeded is false.
     #[prost(message, repeated, tag = "3")]
-    pub responses: ::std::vec::Vec<ResponseOp>,
+    pub responses: ::prost::alloc::vec::Vec<ResponseOp>,
 }
 /// CompactionRequest compacts the key-value store up to a given revision. All superseded keys
 /// with a revision less than the compaction revision will be removed.
@@ -329,7 +333,7 @@ pub struct CompactionRequest {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CompactionResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct HashRequest {}
@@ -342,7 +346,7 @@ pub struct HashKvRequest {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct HashKvResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     /// hash is the hash value computed from the responding member's MVCC keys up to a given revision.
     #[prost(uint32, tag = "2")]
     pub hash: u32,
@@ -353,7 +357,7 @@ pub struct HashKvResponse {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct HashResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     /// hash is the hash value computed from the responding member's KV's backend.
     #[prost(uint32, tag = "2")]
     pub hash: u32,
@@ -365,20 +369,21 @@ pub struct SnapshotResponse {
     /// header has the current key-value store information. The first header in the snapshot
     /// stream indicates the point in time of the snapshot.
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     /// remaining_bytes is the number of blob bytes to be sent after this message
     #[prost(uint64, tag = "2")]
     pub remaining_bytes: u64,
     /// blob contains the next chunk of the snapshot in the snapshot stream.
-    #[prost(bytes, tag = "3")]
-    pub blob: std::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "3")]
+    pub blob: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct WatchRequest {
     /// request_union is a request to either create a new watcher or cancel an existing watcher.
     #[prost(oneof = "watch_request::RequestUnion", tags = "1, 2, 3")]
-    pub request_union: ::std::option::Option<watch_request::RequestUnion>,
+    pub request_union: ::core::option::Option<watch_request::RequestUnion>,
 }
+/// Nested message and enum types in `WatchRequest`.
 pub mod watch_request {
     /// request_union is a request to either create a new watcher or cancel an existing watcher.
     #[derive(Clone, PartialEq, ::prost::Oneof)]
@@ -394,15 +399,15 @@ pub mod watch_request {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct WatchCreateRequest {
     /// key is the key to register for watching.
-    #[prost(bytes, tag = "1")]
-    pub key: std::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "1")]
+    pub key: ::prost::alloc::vec::Vec<u8>,
     /// range_end is the end of the range [key, range_end) to watch. If range_end is not given,
     /// only the key argument is watched. If range_end is equal to '\0', all keys greater than
     /// or equal to the key argument are watched.
     /// If the range_end is one bit larger than the given key,
     /// then all keys with the prefix (the given key) will be watched.
-    #[prost(bytes, tag = "2")]
-    pub range_end: std::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub range_end: ::prost::alloc::vec::Vec<u8>,
     /// start_revision is an optional revision to watch from (inclusive). No start_revision is "now".
     #[prost(int64, tag = "3")]
     pub start_revision: i64,
@@ -414,7 +419,7 @@ pub struct WatchCreateRequest {
     pub progress_notify: bool,
     /// filters filter the events at server side before it sends back to the watcher.
     #[prost(enumeration = "watch_create_request::FilterType", repeated, tag = "5")]
-    pub filters: ::std::vec::Vec<i32>,
+    pub filters: ::prost::alloc::vec::Vec<i32>,
     /// If prev_kv is set, created watcher gets the previous KV before the event happens.
     /// If the previous KV is already compacted, nothing will be returned.
     #[prost(bool, tag = "6")]
@@ -430,6 +435,7 @@ pub struct WatchCreateRequest {
     #[prost(bool, tag = "8")]
     pub fragment: bool,
 }
+/// Nested message and enum types in `WatchCreateRequest`.
 pub mod watch_create_request {
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
@@ -453,7 +459,7 @@ pub struct WatchProgressRequest {}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct WatchResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     /// watch_id is the ID of the watcher that corresponds to the response.
     #[prost(int64, tag = "2")]
     pub watch_id: i64,
@@ -479,12 +485,12 @@ pub struct WatchResponse {
     pub compact_revision: i64,
     /// cancel_reason indicates the reason for canceling the watcher.
     #[prost(string, tag = "6")]
-    pub cancel_reason: std::string::String,
+    pub cancel_reason: ::prost::alloc::string::String,
     /// framgment is true if large watch response was split over multiple responses.
     #[prost(bool, tag = "7")]
     pub fragment: bool,
     #[prost(message, repeated, tag = "11")]
-    pub events: ::std::vec::Vec<super::mvccpb::Event>,
+    pub events: ::prost::alloc::vec::Vec<super::mvccpb::Event>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LeaseGrantRequest {
@@ -498,7 +504,7 @@ pub struct LeaseGrantRequest {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LeaseGrantResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     /// ID is the lease ID for the granted lease.
     #[prost(int64, tag = "2")]
     pub id: i64,
@@ -506,7 +512,7 @@ pub struct LeaseGrantResponse {
     #[prost(int64, tag = "3")]
     pub ttl: i64,
     #[prost(string, tag = "4")]
-    pub error: std::string::String,
+    pub error: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LeaseRevokeRequest {
@@ -517,7 +523,7 @@ pub struct LeaseRevokeRequest {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LeaseRevokeResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LeaseCheckpoint {
@@ -531,12 +537,12 @@ pub struct LeaseCheckpoint {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LeaseCheckpointRequest {
     #[prost(message, repeated, tag = "1")]
-    pub checkpoints: ::std::vec::Vec<LeaseCheckpoint>,
+    pub checkpoints: ::prost::alloc::vec::Vec<LeaseCheckpoint>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LeaseCheckpointResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LeaseKeepAliveRequest {
@@ -547,7 +553,7 @@ pub struct LeaseKeepAliveRequest {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LeaseKeepAliveResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     /// ID is the lease ID from the keep alive request.
     #[prost(int64, tag = "2")]
     pub id: i64,
@@ -567,7 +573,7 @@ pub struct LeaseTimeToLiveRequest {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LeaseTimeToLiveResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     /// ID is the lease ID from the keep alive request.
     #[prost(int64, tag = "2")]
     pub id: i64,
@@ -578,8 +584,8 @@ pub struct LeaseTimeToLiveResponse {
     #[prost(int64, tag = "4")]
     pub granted_ttl: i64,
     /// Keys is the list of keys attached to this lease.
-    #[prost(bytes, repeated, tag = "5")]
-    pub keys: ::std::vec::Vec<std::vec::Vec<u8>>,
+    #[prost(bytes = "vec", repeated, tag = "5")]
+    pub keys: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LeaseLeasesRequest {}
@@ -592,9 +598,9 @@ pub struct LeaseStatus {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LeaseLeasesResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     #[prost(message, repeated, tag = "2")]
-    pub leases: ::std::vec::Vec<LeaseStatus>,
+    pub leases: ::prost::alloc::vec::Vec<LeaseStatus>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Member {
@@ -603,13 +609,13 @@ pub struct Member {
     pub id: u64,
     /// name is the human-readable name of the member. If the member is not started, the name will be an empty string.
     #[prost(string, tag = "2")]
-    pub name: std::string::String,
+    pub name: ::prost::alloc::string::String,
     /// peerURLs is the list of URLs the member exposes to the cluster for communication.
     #[prost(string, repeated, tag = "3")]
-    pub peer_ur_ls: ::std::vec::Vec<std::string::String>,
+    pub peer_ur_ls: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
     /// clientURLs is the list of URLs the member exposes to clients for communication. If the member is not started, clientURLs will be empty.
     #[prost(string, repeated, tag = "4")]
-    pub client_ur_ls: ::std::vec::Vec<std::string::String>,
+    pub client_ur_ls: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
     /// isLearner indicates if the member is raft learner.
     #[prost(bool, tag = "5")]
     pub is_learner: bool,
@@ -618,7 +624,7 @@ pub struct Member {
 pub struct MemberAddRequest {
     /// peerURLs is the list of URLs the added member will use to communicate with the cluster.
     #[prost(string, repeated, tag = "1")]
-    pub peer_ur_ls: ::std::vec::Vec<std::string::String>,
+    pub peer_ur_ls: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
     /// isLearner indicates if the added member is raft learner.
     #[prost(bool, tag = "2")]
     pub is_learner: bool,
@@ -626,13 +632,13 @@ pub struct MemberAddRequest {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MemberAddResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     /// member is the member information for the added member.
     #[prost(message, optional, tag = "2")]
-    pub member: ::std::option::Option<Member>,
+    pub member: ::core::option::Option<Member>,
     /// members is a list of all members after adding the new member.
     #[prost(message, repeated, tag = "3")]
-    pub members: ::std::vec::Vec<Member>,
+    pub members: ::prost::alloc::vec::Vec<Member>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MemberRemoveRequest {
@@ -643,10 +649,10 @@ pub struct MemberRemoveRequest {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MemberRemoveResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     /// members is a list of all members after removing the member.
     #[prost(message, repeated, tag = "2")]
-    pub members: ::std::vec::Vec<Member>,
+    pub members: ::prost::alloc::vec::Vec<Member>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MemberUpdateRequest {
@@ -655,25 +661,25 @@ pub struct MemberUpdateRequest {
     pub id: u64,
     /// peerURLs is the new list of URLs the member will use to communicate with the cluster.
     #[prost(string, repeated, tag = "2")]
-    pub peer_ur_ls: ::std::vec::Vec<std::string::String>,
+    pub peer_ur_ls: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MemberUpdateResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     /// members is a list of all members after updating the member.
     #[prost(message, repeated, tag = "2")]
-    pub members: ::std::vec::Vec<Member>,
+    pub members: ::prost::alloc::vec::Vec<Member>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MemberListRequest {}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MemberListResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     /// members is a list of all members associated with the cluster.
     #[prost(message, repeated, tag = "2")]
-    pub members: ::std::vec::Vec<Member>,
+    pub members: ::prost::alloc::vec::Vec<Member>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MemberPromoteRequest {
@@ -684,17 +690,17 @@ pub struct MemberPromoteRequest {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MemberPromoteResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     /// members is a list of all members after promoting the member.
     #[prost(message, repeated, tag = "2")]
-    pub members: ::std::vec::Vec<Member>,
+    pub members: ::prost::alloc::vec::Vec<Member>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DefragmentRequest {}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DefragmentResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MoveLeaderRequest {
@@ -705,7 +711,7 @@ pub struct MoveLeaderRequest {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MoveLeaderResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AlarmRequest {
@@ -722,6 +728,7 @@ pub struct AlarmRequest {
     #[prost(enumeration = "AlarmType", tag = "3")]
     pub alarm: i32,
 }
+/// Nested message and enum types in `AlarmRequest`.
 pub mod alarm_request {
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
@@ -743,20 +750,20 @@ pub struct AlarmMember {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AlarmResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     /// alarms is a list of alarms associated with the alarm request.
     #[prost(message, repeated, tag = "2")]
-    pub alarms: ::std::vec::Vec<AlarmMember>,
+    pub alarms: ::prost::alloc::vec::Vec<AlarmMember>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct StatusRequest {}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct StatusResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     /// version is the cluster protocol version used by the responding member.
     #[prost(string, tag = "2")]
-    pub version: std::string::String,
+    pub version: ::prost::alloc::string::String,
     /// dbSize is the size of the backend database physically allocated, in bytes, of the responding member.
     #[prost(int64, tag = "3")]
     pub db_size: i64,
@@ -774,7 +781,7 @@ pub struct StatusResponse {
     pub raft_applied_index: u64,
     /// errors contains alarm/health information and status.
     #[prost(string, repeated, tag = "8")]
-    pub errors: ::std::vec::Vec<std::string::String>,
+    pub errors: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
     /// dbSizeInUse is the size of the backend database logically in use, in bytes, of the responding member.
     #[prost(int64, tag = "9")]
     pub db_size_in_use: i64,
@@ -789,65 +796,65 @@ pub struct AuthDisableRequest {}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthenticateRequest {
     #[prost(string, tag = "1")]
-    pub name: std::string::String,
+    pub name: ::prost::alloc::string::String,
     #[prost(string, tag = "2")]
-    pub password: std::string::String,
+    pub password: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthUserAddRequest {
     #[prost(string, tag = "1")]
-    pub name: std::string::String,
+    pub name: ::prost::alloc::string::String,
     #[prost(string, tag = "2")]
-    pub password: std::string::String,
+    pub password: ::prost::alloc::string::String,
     #[prost(message, optional, tag = "3")]
-    pub options: ::std::option::Option<super::authpb::UserAddOptions>,
+    pub options: ::core::option::Option<super::authpb::UserAddOptions>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthUserGetRequest {
     #[prost(string, tag = "1")]
-    pub name: std::string::String,
+    pub name: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthUserDeleteRequest {
     /// name is the name of the user to delete.
     #[prost(string, tag = "1")]
-    pub name: std::string::String,
+    pub name: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthUserChangePasswordRequest {
     /// name is the name of the user whose password is being changed.
     #[prost(string, tag = "1")]
-    pub name: std::string::String,
+    pub name: ::prost::alloc::string::String,
     /// password is the new password for the user.
     #[prost(string, tag = "2")]
-    pub password: std::string::String,
+    pub password: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthUserGrantRoleRequest {
     /// user is the name of the user which should be granted a given role.
     #[prost(string, tag = "1")]
-    pub user: std::string::String,
+    pub user: ::prost::alloc::string::String,
     /// role is the name of the role to grant to the user.
     #[prost(string, tag = "2")]
-    pub role: std::string::String,
+    pub role: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthUserRevokeRoleRequest {
     #[prost(string, tag = "1")]
-    pub name: std::string::String,
+    pub name: ::prost::alloc::string::String,
     #[prost(string, tag = "2")]
-    pub role: std::string::String,
+    pub role: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthRoleAddRequest {
     /// name is the name of the role to add to the authentication system.
     #[prost(string, tag = "1")]
-    pub name: std::string::String,
+    pub name: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthRoleGetRequest {
     #[prost(string, tag = "1")]
-    pub role: std::string::String,
+    pub role: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthUserListRequest {}
@@ -856,116 +863,116 @@ pub struct AuthRoleListRequest {}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthRoleDeleteRequest {
     #[prost(string, tag = "1")]
-    pub role: std::string::String,
+    pub role: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthRoleGrantPermissionRequest {
     /// name is the name of the role which will be granted the permission.
     #[prost(string, tag = "1")]
-    pub name: std::string::String,
+    pub name: ::prost::alloc::string::String,
     /// perm is the permission to grant to the role.
     #[prost(message, optional, tag = "2")]
-    pub perm: ::std::option::Option<super::authpb::Permission>,
+    pub perm: ::core::option::Option<super::authpb::Permission>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthRoleRevokePermissionRequest {
     #[prost(string, tag = "1")]
-    pub role: std::string::String,
-    #[prost(bytes, tag = "2")]
-    pub key: std::vec::Vec<u8>,
-    #[prost(bytes, tag = "3")]
-    pub range_end: std::vec::Vec<u8>,
+    pub role: ::prost::alloc::string::String,
+    #[prost(bytes = "vec", tag = "2")]
+    pub key: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "3")]
+    pub range_end: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthEnableResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthDisableResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthenticateResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     /// token is an authorized token that can be used in succeeding RPCs
     #[prost(string, tag = "2")]
-    pub token: std::string::String,
+    pub token: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthUserAddResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthUserGetResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     #[prost(string, repeated, tag = "2")]
-    pub roles: ::std::vec::Vec<std::string::String>,
+    pub roles: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthUserDeleteResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthUserChangePasswordResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthUserGrantRoleResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthUserRevokeRoleResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthRoleAddResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthRoleGetResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     #[prost(message, repeated, tag = "2")]
-    pub perm: ::std::vec::Vec<super::authpb::Permission>,
+    pub perm: ::prost::alloc::vec::Vec<super::authpb::Permission>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthRoleListResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     #[prost(string, repeated, tag = "2")]
-    pub roles: ::std::vec::Vec<std::string::String>,
+    pub roles: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthUserListResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
     #[prost(string, repeated, tag = "2")]
-    pub users: ::std::vec::Vec<std::string::String>,
+    pub users: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthRoleDeleteResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthRoleGrantPermissionResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthRoleRevokePermissionResponse {
     #[prost(message, optional, tag = "1")]
-    pub header: ::std::option::Option<ResponseHeader>,
+    pub header: ::core::option::Option<ResponseHeader>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]

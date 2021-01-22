@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use tokio::time::delay_for;
+use tokio::time::sleep;
 
 use etcdv3client::{EtcdClient, EtcdClientError};
 
@@ -28,7 +28,7 @@ async fn main() -> Result<(), EtcdClientError> {
         .await?;
     println!("put {}-{} done at {:?}", key, world, start.elapsed());
 
-    delay_for(Duration::from_secs(1)).await;
+    sleep(Duration::from_secs(1)).await;
     // after 1 second, lease still available
     let info = client.get_lease_info(lease.id, true).await?;
     println!("got lease: {:?}", info);
@@ -36,7 +36,7 @@ async fn main() -> Result<(), EtcdClientError> {
     let value = client.get_string(key).await;
     println!("try get {}: {:?} at {:?}", key, value, start.elapsed());
 
-    delay_for(Duration::from_secs(3)).await;
+    sleep(Duration::from_secs(3)).await;
     // after 1+3 seconds, lease unavailable
     let value = client.get_string(key).await;
     println!("try get {}: {:?} at {:?}", key, value, start.elapsed());
@@ -55,7 +55,7 @@ async fn main() -> Result<(), EtcdClientError> {
 
     let mut aliver = client.keep_lease_alive(lease.id).await?;
     loop {
-        delay_for(Duration::from_secs(1)).await;
+        sleep(Duration::from_secs(1)).await;
 
         let elapsed = start.elapsed();
         if elapsed > Duration::from_secs(6) {
