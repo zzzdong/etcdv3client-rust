@@ -51,11 +51,6 @@ More examples can be found in [`examples`].
 - [ ] Maintenance
 - [ ] Auth
 
-## Rust Version
-
-`etcdv3client` currently works on rust `1.39` and above as it requires support for the `async_await`
-feature.
-
 ## License
 
 This project is licensed under the [MIT license](LICENSE).

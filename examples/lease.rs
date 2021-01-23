@@ -53,22 +53,33 @@ async fn main() -> Result<(), EtcdClientError> {
         .finish()
         .await?;
 
+    println!("put {} with {:?} at {:?} done", key, world, start.elapsed());
+
     let mut aliver = client.keep_lease_alive(lease.id).await?;
     loop {
         sleep(Duration::from_secs(1)).await;
 
         let elapsed = start.elapsed();
-        if elapsed > Duration::from_secs(6) {
-            break;
+        if elapsed < Duration::from_secs(3) {
+            aliver.keep_alive().await?;
+            print!("after {:?}, aliver is alive\t", elapsed);
+            print!(
+                "TTL is {:?} \t",
+                aliver.message().await.unwrap().unwrap().ttl
+            )
+        } else {
+            print!("after {:?}, aliver is dead\t", elapsed);
         }
 
-        if elapsed > Duration::from_secs(4) {
-            let value = client.get_string(key).await;
-            println!("try get {}: {:?} at {:?}", key, value, elapsed);
-            assert_eq!(value.is_ok(), true);
-            println!("after {:?}, {} still alive", elapsed, key);
+        match client.get_string(key).await {
+            Ok(_v) => {
+                println!("{} still alive", key);
+            }
+            Err(e) => {
+                println!("get {} error with {:?}", key, e);
+                break;
+            }
         }
-        aliver.keep_alive().await?;
     }
 
     Ok(())
