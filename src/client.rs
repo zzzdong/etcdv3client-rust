@@ -6,6 +6,7 @@ use crate::kv::KvClient;
 use crate::lease::{LeaseClient, LeaseKeepAliver};
 use crate::watch::{WatchClient, Watcher};
 
+use http::Uri;
 use tonic::transport::{channel::Channel, Endpoint};
 use tonic::{metadata::MetadataValue, Request};
 
@@ -27,12 +28,23 @@ impl EtcdClient {
         endpoints: Vec<impl AsRef<str>>,
         auth: Option<(String, String)>,
     ) -> Result<Self> {
+        let mut ep_uris = Vec::new();
+
+        // check endpoints
+        for ep in &endpoints {
+            let uri: Uri = ep.as_ref().parse()?;
+            if uri.scheme().is_none() {
+                return Err(EtcdClientError::EndpointError);
+            }
+            ep_uris.push(uri);
+        }
+
         let mut token = None;
 
         // try to get token
         if let Some((name, password)) = auth {
-            for endpoint in &endpoints {
-                if let Ok(t) = get_token(endpoint, &name, &password).await {
+            for ep in &ep_uris {
+                if let Ok(t) = get_token(ep.clone(), &name, &password).await {
                     token = Some(t);
                     break;
                 }
@@ -43,7 +55,7 @@ impl EtcdClient {
             }
         }
 
-        let channel = new_channel(endpoints).await?;
+        let channel = new_channel(ep_uris).await?;
 
         let mut interceptor = None;
         if let Some(t) = token {
@@ -141,7 +153,7 @@ impl EtcdClient {
     }
 }
 
-async fn get_token(endpoint: impl AsRef<str>, name: &str, password: &str) -> Result<String> {
+async fn get_token(endpoint: Uri, name: &str, password: &str) -> Result<String> {
     let channel = new_channel(vec![endpoint]).await?;
 
     let mut auth_client = AuthClient::new(channel, None);
@@ -149,11 +161,11 @@ async fn get_token(endpoint: impl AsRef<str>, name: &str, password: &str) -> Res
     auth_client.get_token(name, password).await
 }
 
-async fn new_channel(endpoints: Vec<impl AsRef<str>>) -> Result<Channel> {
+async fn new_channel(endpoints: Vec<Uri>) -> Result<Channel> {
     let mut eps: Vec<Endpoint> = Vec::new();
 
     for ep in endpoints {
-        eps.push(Channel::builder(ep.as_ref().parse()?));
+        eps.push(Channel::builder(ep));
     }
 
     match eps.len() {
