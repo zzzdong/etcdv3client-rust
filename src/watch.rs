@@ -2,33 +2,29 @@ use std::fmt;
 
 use crate::error::{EtcdClientError, Result, WatchError};
 use crate::pb::{self, watch_client::WatchClient as PbWatchClient};
+use crate::service::EtcdSvc;
 use crate::utils::build_prefix_end;
 use crate::EtcdClient;
 
 use tokio::sync::mpsc::{channel, Sender};
 use tonic::codec::Streaming;
-use tonic::transport::channel::Channel;
 
 const MPSC_CHANNEL_SIZE: usize = 1;
 
 pub struct WatchClient {
-    inner: PbWatchClient<Channel>,
+    inner: PbWatchClient<EtcdSvc>,
 }
 
 impl WatchClient {
-    pub fn new(channel: Channel, interceptor: Option<tonic::Interceptor>) -> Self {
-        let client = match interceptor {
-            Some(i) => PbWatchClient::with_interceptor(channel, i),
-            None => PbWatchClient::new(channel),
-        };
-
-        WatchClient { inner: client }
+    pub fn new(channel: EtcdSvc) -> Self {
+        WatchClient {
+            inner: PbWatchClient::new(channel),
+        }
     }
 
     pub fn with_client(client: &EtcdClient) -> Self {
         let channel = client.channel.clone();
-        let interceptor = client.interceptor.clone();
-        Self::new(channel, interceptor)
+        Self::new(channel)
     }
 
     /// watch

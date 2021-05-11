@@ -1,5 +1,8 @@
+use std::sync::Arc;
+
 use crate::error::{EtcdClientError, Result};
 use crate::pb;
+use crate::service::EtcdSvc;
 
 use crate::auth::AuthClient;
 use crate::kv::KvClient;
@@ -8,9 +11,6 @@ use crate::watch::{WatchClient, Watcher};
 
 use http::Uri;
 use tonic::transport::{channel::Channel, Endpoint};
-use tonic::{metadata::MetadataValue, Request};
-
-pub(crate) const TOKEN_ID: &str = "token";
 
 pub struct EtcdClient {
     pub kv: KvClient,
@@ -18,8 +18,7 @@ pub struct EtcdClient {
     pub watch: WatchClient,
     pub lease: LeaseClient,
 
-    pub(crate) channel: Channel,
-    pub(crate) interceptor: Option<tonic::Interceptor>,
+    pub(crate) channel: EtcdSvc,
 }
 
 impl EtcdClient {
@@ -39,46 +38,15 @@ impl EtcdClient {
             ep_uris.push(uri);
         }
 
-        let mut token = None;
-
-        // try to get token
-        if let Some((name, password)) = auth {
-            for ep in &ep_uris {
-                if let Ok(t) = get_token(ep.clone(), &name, &password).await {
-                    token = Some(t);
-                    break;
-                }
-            }
-            // after try all, report error when not got.
-            if token.is_none() {
-                return Err(EtcdClientError::ErrMsg("can not get token".to_string()));
-            }
-        }
-
-        let channel = new_channel(ep_uris).await?;
-
-        let mut interceptor = None;
-        if let Some(t) = token {
-            let token = MetadataValue::from_str(&t).unwrap();
-            interceptor = Some(
-                {
-                    move |mut req: Request<()>| {
-                        req.metadata_mut().insert(TOKEN_ID, token.clone());
-
-                        Ok(req)
-                    }
-                }
-                .into(),
-            )
-        }
+        let channel = new_channel(ep_uris.clone()).await?;
+        let svc = EtcdSvc::new(channel, Arc::new(auth));
 
         Ok(EtcdClient {
-            auth: AuthClient::new(channel.clone(), interceptor.clone()),
-            kv: KvClient::new(channel.clone(), interceptor.clone()),
-            watch: WatchClient::new(channel.clone(), interceptor.clone()),
-            lease: LeaseClient::new(channel.clone(), interceptor.clone()),
-            channel,
-            interceptor,
+            auth: AuthClient::new(svc.clone()),
+            kv: KvClient::new(svc.clone()),
+            watch: WatchClient::new(svc.clone()),
+            lease: LeaseClient::new(svc.clone()),
+            channel: svc,
         })
     }
 
@@ -151,14 +119,11 @@ impl EtcdClient {
     pub async fn list_leases(&mut self) -> Result<pb::LeaseLeasesResponse> {
         self.lease.list().await
     }
-}
 
-async fn get_token(endpoint: Uri, name: &str, password: &str) -> Result<String> {
-    let channel = new_channel(vec![endpoint]).await?;
-
-    let mut auth_client = AuthClient::new(channel, None);
-
-    auth_client.get_token(name, password).await
+    /// Refresh token
+    pub async fn refresh_token(&mut self) -> Result<()> {
+        self.channel.refresh_token().await
+    }
 }
 
 async fn new_channel(endpoints: Vec<Uri>) -> Result<Channel> {

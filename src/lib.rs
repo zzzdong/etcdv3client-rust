@@ -30,6 +30,7 @@
 mod client;
 mod error;
 pub mod pb;
+mod service;
 mod utils;
 
 mod auth;
