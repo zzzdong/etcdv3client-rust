@@ -672,7 +672,10 @@ pub struct MemberUpdateResponse {
     pub members: ::prost::alloc::vec::Vec<Member>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MemberListRequest {}
+pub struct MemberListRequest {
+    #[prost(bool, tag = "1")]
+    pub linearizable: bool,
+}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MemberListResponse {
     #[prost(message, optional, tag = "1")]
@@ -756,6 +759,35 @@ pub struct AlarmResponse {
     pub alarms: ::prost::alloc::vec::Vec<AlarmMember>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DowngradeRequest {
+    /// action is the kind of downgrade request to issue. The action may
+    /// VALIDATE the target version, DOWNGRADE the cluster version,
+    /// or CANCEL the current downgrading job.
+    #[prost(enumeration = "downgrade_request::DowngradeAction", tag = "1")]
+    pub action: i32,
+    /// version is the target version to downgrade.
+    #[prost(string, tag = "2")]
+    pub version: ::prost::alloc::string::String,
+}
+/// Nested message and enum types in `DowngradeRequest`.
+pub mod downgrade_request {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+    #[repr(i32)]
+    pub enum DowngradeAction {
+        Validate = 0,
+        Enable = 1,
+        Cancel = 2,
+    }
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DowngradeResponse {
+    #[prost(message, optional, tag = "1")]
+    pub header: ::core::option::Option<ResponseHeader>,
+    /// version is the current cluster version.
+    #[prost(string, tag = "2")]
+    pub version: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct StatusRequest {}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct StatusResponse {
@@ -794,6 +826,8 @@ pub struct AuthEnableRequest {}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthDisableRequest {}
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct AuthStatusRequest {}
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthenticateRequest {
     #[prost(string, tag = "1")]
     pub name: ::prost::alloc::string::String,
@@ -808,6 +842,8 @@ pub struct AuthUserAddRequest {
     pub password: ::prost::alloc::string::String,
     #[prost(message, optional, tag = "3")]
     pub options: ::core::option::Option<super::authpb::UserAddOptions>,
+    #[prost(string, tag = "4")]
+    pub hashed_password: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthUserGetRequest {
@@ -825,9 +861,12 @@ pub struct AuthUserChangePasswordRequest {
     /// name is the name of the user whose password is being changed.
     #[prost(string, tag = "1")]
     pub name: ::prost::alloc::string::String,
-    /// password is the new password for the user.
+    /// password is the new password for the user. Note that this field will be removed in the API layer.
     #[prost(string, tag = "2")]
     pub password: ::prost::alloc::string::String,
+    /// hashedPassword is the new password for the user. Note that this field will be initialized in the API layer.
+    #[prost(string, tag = "3")]
+    pub hashed_password: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthUserGrantRoleRequest {
@@ -892,6 +931,16 @@ pub struct AuthEnableResponse {
 pub struct AuthDisableResponse {
     #[prost(message, optional, tag = "1")]
     pub header: ::core::option::Option<ResponseHeader>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct AuthStatusResponse {
+    #[prost(message, optional, tag = "1")]
+    pub header: ::core::option::Option<ResponseHeader>,
+    #[prost(bool, tag = "2")]
+    pub enabled: bool,
+    /// authRevision is the current revision of auth store
+    #[prost(uint64, tag = "3")]
+    pub auth_revision: u64,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthenticateResponse {
@@ -986,8 +1035,9 @@ pub enum AlarmType {
 }
 #[doc = r" Generated client implementations."]
 pub mod kv_client {
-    #![allow(unused_variables, dead_code, missing_docs)]
+    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
+    #[derive(Debug, Clone)]
     pub struct KvClient<T> {
         inner: tonic::client::Grpc<T>,
     }
@@ -1005,17 +1055,40 @@ pub mod kv_client {
     impl<T> KvClient<T>
     where
         T: tonic::client::GrpcService<tonic::body::BoxBody>,
-        T::ResponseBody: Body + HttpBody + Send + 'static,
+        T::ResponseBody: Body + Send + Sync + 'static,
         T::Error: Into<StdError>,
-        <T::ResponseBody as HttpBody>::Error: Into<StdError> + Send,
+        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
     {
         pub fn new(inner: T) -> Self {
             let inner = tonic::client::Grpc::new(inner);
             Self { inner }
         }
-        pub fn with_interceptor(inner: T, interceptor: impl Into<tonic::Interceptor>) -> Self {
-            let inner = tonic::client::Grpc::with_interceptor(inner, interceptor);
-            Self { inner }
+        pub fn with_interceptor<F>(inner: T, interceptor: F) -> KvClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<http::Request<tonic::body::BoxBody>>>::Error:
+                Into<StdError> + Send + Sync,
+        {
+            KvClient::new(InterceptedService::new(inner, interceptor))
+        }
+        #[doc = r" Compress requests with `gzip`."]
+        #[doc = r""]
+        #[doc = r" This requires the server to support it otherwise it might respond with an"]
+        #[doc = r" error."]
+        pub fn send_gzip(mut self) -> Self {
+            self.inner = self.inner.send_gzip();
+            self
+        }
+        #[doc = r" Enable decompressing responses with `gzip`."]
+        pub fn accept_gzip(mut self) -> Self {
+            self.inner = self.inner.accept_gzip();
+            self
         }
         #[doc = " Range gets the keys in the range from the key-value store."]
         pub async fn range(
@@ -1102,23 +1175,12 @@ pub mod kv_client {
             self.inner.unary(request.into_request(), path, codec).await
         }
     }
-    impl<T: Clone> Clone for KvClient<T> {
-        fn clone(&self) -> Self {
-            Self {
-                inner: self.inner.clone(),
-            }
-        }
-    }
-    impl<T> std::fmt::Debug for KvClient<T> {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "KvClient {{ ... }}")
-        }
-    }
 }
 #[doc = r" Generated client implementations."]
 pub mod watch_client {
-    #![allow(unused_variables, dead_code, missing_docs)]
+    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
+    #[derive(Debug, Clone)]
     pub struct WatchClient<T> {
         inner: tonic::client::Grpc<T>,
     }
@@ -1136,17 +1198,43 @@ pub mod watch_client {
     impl<T> WatchClient<T>
     where
         T: tonic::client::GrpcService<tonic::body::BoxBody>,
-        T::ResponseBody: Body + HttpBody + Send + 'static,
+        T::ResponseBody: Body + Send + Sync + 'static,
         T::Error: Into<StdError>,
-        <T::ResponseBody as HttpBody>::Error: Into<StdError> + Send,
+        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
     {
         pub fn new(inner: T) -> Self {
             let inner = tonic::client::Grpc::new(inner);
             Self { inner }
         }
-        pub fn with_interceptor(inner: T, interceptor: impl Into<tonic::Interceptor>) -> Self {
-            let inner = tonic::client::Grpc::with_interceptor(inner, interceptor);
-            Self { inner }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> WatchClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<http::Request<tonic::body::BoxBody>>>::Error:
+                Into<StdError> + Send + Sync,
+        {
+            WatchClient::new(InterceptedService::new(inner, interceptor))
+        }
+        #[doc = r" Compress requests with `gzip`."]
+        #[doc = r""]
+        #[doc = r" This requires the server to support it otherwise it might respond with an"]
+        #[doc = r" error."]
+        pub fn send_gzip(mut self) -> Self {
+            self.inner = self.inner.send_gzip();
+            self
+        }
+        #[doc = r" Enable decompressing responses with `gzip`."]
+        pub fn accept_gzip(mut self) -> Self {
+            self.inner = self.inner.accept_gzip();
+            self
         }
         #[doc = " Watch watches for events happening or that have happened. Both input and output"]
         #[doc = " are streams; the input stream is for creating and canceling watchers and the output"]
@@ -1171,23 +1259,12 @@ pub mod watch_client {
                 .await
         }
     }
-    impl<T: Clone> Clone for WatchClient<T> {
-        fn clone(&self) -> Self {
-            Self {
-                inner: self.inner.clone(),
-            }
-        }
-    }
-    impl<T> std::fmt::Debug for WatchClient<T> {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "WatchClient {{ ... }}")
-        }
-    }
 }
 #[doc = r" Generated client implementations."]
 pub mod lease_client {
-    #![allow(unused_variables, dead_code, missing_docs)]
+    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
+    #[derive(Debug, Clone)]
     pub struct LeaseClient<T> {
         inner: tonic::client::Grpc<T>,
     }
@@ -1205,17 +1282,43 @@ pub mod lease_client {
     impl<T> LeaseClient<T>
     where
         T: tonic::client::GrpcService<tonic::body::BoxBody>,
-        T::ResponseBody: Body + HttpBody + Send + 'static,
+        T::ResponseBody: Body + Send + Sync + 'static,
         T::Error: Into<StdError>,
-        <T::ResponseBody as HttpBody>::Error: Into<StdError> + Send,
+        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
     {
         pub fn new(inner: T) -> Self {
             let inner = tonic::client::Grpc::new(inner);
             Self { inner }
         }
-        pub fn with_interceptor(inner: T, interceptor: impl Into<tonic::Interceptor>) -> Self {
-            let inner = tonic::client::Grpc::with_interceptor(inner, interceptor);
-            Self { inner }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> LeaseClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<http::Request<tonic::body::BoxBody>>>::Error:
+                Into<StdError> + Send + Sync,
+        {
+            LeaseClient::new(InterceptedService::new(inner, interceptor))
+        }
+        #[doc = r" Compress requests with `gzip`."]
+        #[doc = r""]
+        #[doc = r" This requires the server to support it otherwise it might respond with an"]
+        #[doc = r" error."]
+        pub fn send_gzip(mut self) -> Self {
+            self.inner = self.inner.send_gzip();
+            self
+        }
+        #[doc = r" Enable decompressing responses with `gzip`."]
+        pub fn accept_gzip(mut self) -> Self {
+            self.inner = self.inner.accept_gzip();
+            self
         }
         #[doc = " LeaseGrant creates a lease which expires if the server does not receive a keepAlive"]
         #[doc = " within a given time to live period. All keys attached to the lease will be expired and"]
@@ -1301,23 +1404,12 @@ pub mod lease_client {
             self.inner.unary(request.into_request(), path, codec).await
         }
     }
-    impl<T: Clone> Clone for LeaseClient<T> {
-        fn clone(&self) -> Self {
-            Self {
-                inner: self.inner.clone(),
-            }
-        }
-    }
-    impl<T> std::fmt::Debug for LeaseClient<T> {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "LeaseClient {{ ... }}")
-        }
-    }
 }
 #[doc = r" Generated client implementations."]
 pub mod cluster_client {
-    #![allow(unused_variables, dead_code, missing_docs)]
+    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
+    #[derive(Debug, Clone)]
     pub struct ClusterClient<T> {
         inner: tonic::client::Grpc<T>,
     }
@@ -1335,17 +1427,43 @@ pub mod cluster_client {
     impl<T> ClusterClient<T>
     where
         T: tonic::client::GrpcService<tonic::body::BoxBody>,
-        T::ResponseBody: Body + HttpBody + Send + 'static,
+        T::ResponseBody: Body + Send + Sync + 'static,
         T::Error: Into<StdError>,
-        <T::ResponseBody as HttpBody>::Error: Into<StdError> + Send,
+        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
     {
         pub fn new(inner: T) -> Self {
             let inner = tonic::client::Grpc::new(inner);
             Self { inner }
         }
-        pub fn with_interceptor(inner: T, interceptor: impl Into<tonic::Interceptor>) -> Self {
-            let inner = tonic::client::Grpc::with_interceptor(inner, interceptor);
-            Self { inner }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> ClusterClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<http::Request<tonic::body::BoxBody>>>::Error:
+                Into<StdError> + Send + Sync,
+        {
+            ClusterClient::new(InterceptedService::new(inner, interceptor))
+        }
+        #[doc = r" Compress requests with `gzip`."]
+        #[doc = r""]
+        #[doc = r" This requires the server to support it otherwise it might respond with an"]
+        #[doc = r" error."]
+        pub fn send_gzip(mut self) -> Self {
+            self.inner = self.inner.send_gzip();
+            self
+        }
+        #[doc = r" Enable decompressing responses with `gzip`."]
+        pub fn accept_gzip(mut self) -> Self {
+            self.inner = self.inner.accept_gzip();
+            self
         }
         #[doc = " MemberAdd adds a member into the cluster."]
         pub async fn member_add(
@@ -1423,23 +1541,12 @@ pub mod cluster_client {
             self.inner.unary(request.into_request(), path, codec).await
         }
     }
-    impl<T: Clone> Clone for ClusterClient<T> {
-        fn clone(&self) -> Self {
-            Self {
-                inner: self.inner.clone(),
-            }
-        }
-    }
-    impl<T> std::fmt::Debug for ClusterClient<T> {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "ClusterClient {{ ... }}")
-        }
-    }
 }
 #[doc = r" Generated client implementations."]
 pub mod maintenance_client {
-    #![allow(unused_variables, dead_code, missing_docs)]
+    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
+    #[derive(Debug, Clone)]
     pub struct MaintenanceClient<T> {
         inner: tonic::client::Grpc<T>,
     }
@@ -1457,17 +1564,43 @@ pub mod maintenance_client {
     impl<T> MaintenanceClient<T>
     where
         T: tonic::client::GrpcService<tonic::body::BoxBody>,
-        T::ResponseBody: Body + HttpBody + Send + 'static,
+        T::ResponseBody: Body + Send + Sync + 'static,
         T::Error: Into<StdError>,
-        <T::ResponseBody as HttpBody>::Error: Into<StdError> + Send,
+        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
     {
         pub fn new(inner: T) -> Self {
             let inner = tonic::client::Grpc::new(inner);
             Self { inner }
         }
-        pub fn with_interceptor(inner: T, interceptor: impl Into<tonic::Interceptor>) -> Self {
-            let inner = tonic::client::Grpc::with_interceptor(inner, interceptor);
-            Self { inner }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> MaintenanceClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<http::Request<tonic::body::BoxBody>>>::Error:
+                Into<StdError> + Send + Sync,
+        {
+            MaintenanceClient::new(InterceptedService::new(inner, interceptor))
+        }
+        #[doc = r" Compress requests with `gzip`."]
+        #[doc = r""]
+        #[doc = r" This requires the server to support it otherwise it might respond with an"]
+        #[doc = r" error."]
+        pub fn send_gzip(mut self) -> Self {
+            self.inner = self.inner.send_gzip();
+            self
+        }
+        #[doc = r" Enable decompressing responses with `gzip`."]
+        pub fn accept_gzip(mut self) -> Self {
+            self.inner = self.inner.accept_gzip();
+            self
         }
         #[doc = " Alarm activates, deactivates, and queries alarms regarding cluster health."]
         pub async fn alarm(
@@ -1583,24 +1716,30 @@ pub mod maintenance_client {
             let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Maintenance/MoveLeader");
             self.inner.unary(request.into_request(), path, codec).await
         }
-    }
-    impl<T: Clone> Clone for MaintenanceClient<T> {
-        fn clone(&self) -> Self {
-            Self {
-                inner: self.inner.clone(),
-            }
-        }
-    }
-    impl<T> std::fmt::Debug for MaintenanceClient<T> {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "MaintenanceClient {{ ... }}")
+        #[doc = " Downgrade requests downgrades, verifies feasibility or cancels downgrade"]
+        #[doc = " on the cluster version."]
+        #[doc = " Supported since etcd 3.5."]
+        pub async fn downgrade(
+            &mut self,
+            request: impl tonic::IntoRequest<super::DowngradeRequest>,
+        ) -> Result<tonic::Response<super::DowngradeResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Unknown,
+                    format!("Service was not ready: {}", e.into()),
+                )
+            })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Maintenance/Downgrade");
+            self.inner.unary(request.into_request(), path, codec).await
         }
     }
 }
 #[doc = r" Generated client implementations."]
 pub mod auth_client {
-    #![allow(unused_variables, dead_code, missing_docs)]
+    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
+    #[derive(Debug, Clone)]
     pub struct AuthClient<T> {
         inner: tonic::client::Grpc<T>,
     }
@@ -1618,17 +1757,40 @@ pub mod auth_client {
     impl<T> AuthClient<T>
     where
         T: tonic::client::GrpcService<tonic::body::BoxBody>,
-        T::ResponseBody: Body + HttpBody + Send + 'static,
+        T::ResponseBody: Body + Send + Sync + 'static,
         T::Error: Into<StdError>,
-        <T::ResponseBody as HttpBody>::Error: Into<StdError> + Send,
+        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
     {
         pub fn new(inner: T) -> Self {
             let inner = tonic::client::Grpc::new(inner);
             Self { inner }
         }
-        pub fn with_interceptor(inner: T, interceptor: impl Into<tonic::Interceptor>) -> Self {
-            let inner = tonic::client::Grpc::with_interceptor(inner, interceptor);
-            Self { inner }
+        pub fn with_interceptor<F>(inner: T, interceptor: F) -> AuthClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<http::Request<tonic::body::BoxBody>>>::Error:
+                Into<StdError> + Send + Sync,
+        {
+            AuthClient::new(InterceptedService::new(inner, interceptor))
+        }
+        #[doc = r" Compress requests with `gzip`."]
+        #[doc = r""]
+        #[doc = r" This requires the server to support it otherwise it might respond with an"]
+        #[doc = r" error."]
+        pub fn send_gzip(mut self) -> Self {
+            self.inner = self.inner.send_gzip();
+            self
+        }
+        #[doc = r" Enable decompressing responses with `gzip`."]
+        pub fn accept_gzip(mut self) -> Self {
+            self.inner = self.inner.accept_gzip();
+            self
         }
         #[doc = " AuthEnable enables authentication."]
         pub async fn auth_enable(
@@ -1658,6 +1820,21 @@ pub mod auth_client {
             })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/AuthDisable");
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        #[doc = " AuthStatus displays authentication status."]
+        pub async fn auth_status(
+            &mut self,
+            request: impl tonic::IntoRequest<super::AuthStatusRequest>,
+        ) -> Result<tonic::Response<super::AuthStatusResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Unknown,
+                    format!("Service was not ready: {}", e.into()),
+                )
+            })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/AuthStatus");
             self.inner.unary(request.into_request(), path, codec).await
         }
         #[doc = " Authenticate processes an authenticate request."]
@@ -1874,18 +2051,6 @@ pub mod auth_client {
             let path =
                 http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/RoleRevokePermission");
             self.inner.unary(request.into_request(), path, codec).await
-        }
-    }
-    impl<T: Clone> Clone for AuthClient<T> {
-        fn clone(&self) -> Self {
-            Self {
-                inner: self.inner.clone(),
-            }
-        }
-    }
-    impl<T> std::fmt::Debug for AuthClient<T> {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "AuthClient {{ ... }}")
         }
     }
 }

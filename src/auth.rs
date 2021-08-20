@@ -11,19 +11,15 @@ pub struct AuthClient {
 }
 
 impl AuthClient {
-    pub fn new(channel: Channel, interceptor: Option<tonic::Interceptor>) -> Self {
-        let client = match interceptor {
-            Some(i) => PbAuthClient::with_interceptor(channel, i),
-            None => PbAuthClient::new(channel),
-        };
+    pub fn new(channel: Channel) -> Self {
+        let client = PbAuthClient::new(channel);
 
         AuthClient { inner: client }
     }
 
     pub fn with_client(client: &EtcdClient) -> Self {
         let channel = client.channel.clone();
-        let interceptor = client.interceptor.clone();
-        Self::new(channel, interceptor)
+        Self::new(channel)
     }
 
     pub fn do_auth_enable(&mut self) -> DoAuthEnableRequest {
@@ -63,16 +59,21 @@ impl AuthClient {
         &mut self,
         name: impl AsRef<str>,
         password: impl AsRef<str>,
+        hashed_password: impl AsRef<str>,
     ) -> DoAuthUserAddRequest {
-        DoAuthUserAddRequest::new(name, password, self)
+        DoAuthUserAddRequest::new(name, password, hashed_password, self)
     }
 
     pub async fn add_user(
         &mut self,
         name: impl AsRef<str>,
         password: impl AsRef<str>,
+        hashed_password: impl AsRef<str>,
     ) -> Result<()> {
-        let _resp = self.do_user_add(name, password).finish().await?;
+        let _resp = self
+            .do_user_add(name, password, hashed_password)
+            .finish()
+            .await?;
         Ok(())
     }
 
@@ -126,10 +127,15 @@ impl<'a> DoAuthenticateRequest<'a> {
 }
 
 impl pb::AuthUserAddRequest {
-    pub fn new(name: impl AsRef<str>, password: impl AsRef<str>) -> Self {
+    pub fn new(
+        name: impl AsRef<str>,
+        password: impl AsRef<str>,
+        hashed_password: impl AsRef<str>,
+    ) -> Self {
         pb::AuthUserAddRequest {
             name: name.as_ref().to_string(),
             password: password.as_ref().to_string(),
+            hashed_password: hashed_password.as_ref().to_string(),
             options: None,
         }
     }
@@ -143,10 +149,11 @@ impl<'a> DoAuthUserAddRequest<'a> {
     pub fn new(
         name: impl AsRef<str>,
         password: impl AsRef<str>,
+        hashed_password: impl AsRef<str>,
         client: &'a mut AuthClient,
     ) -> Self {
         DoAuthUserAddRequest {
-            request: pb::AuthUserAddRequest::new(name, password),
+            request: pb::AuthUserAddRequest::new(name, password, hashed_password),
             client,
         }
     }

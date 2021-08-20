@@ -8,9 +8,6 @@ use crate::watch::{WatchClient, Watcher};
 
 use http::Uri;
 use tonic::transport::{channel::Channel, Endpoint};
-use tonic::{metadata::MetadataValue, Request};
-
-pub(crate) const TOKEN_ID: &str = "token";
 
 pub struct EtcdClient {
     pub kv: KvClient,
@@ -19,7 +16,6 @@ pub struct EtcdClient {
     pub lease: LeaseClient,
 
     pub(crate) channel: Channel,
-    pub(crate) interceptor: Option<tonic::Interceptor>,
 }
 
 impl EtcdClient {
@@ -57,28 +53,12 @@ impl EtcdClient {
 
         let channel = new_channel(ep_uris).await?;
 
-        let mut interceptor = None;
-        if let Some(t) = token {
-            let token = MetadataValue::from_str(&t).unwrap();
-            interceptor = Some(
-                {
-                    move |mut req: Request<()>| {
-                        req.metadata_mut().insert(TOKEN_ID, token.clone());
-
-                        Ok(req)
-                    }
-                }
-                .into(),
-            )
-        }
-
         Ok(EtcdClient {
-            auth: AuthClient::new(channel.clone(), interceptor.clone()),
-            kv: KvClient::new(channel.clone(), interceptor.clone()),
-            watch: WatchClient::new(channel.clone(), interceptor.clone()),
-            lease: LeaseClient::new(channel.clone(), interceptor.clone()),
+            auth: AuthClient::new(channel.clone()),
+            kv: KvClient::new(channel.clone()),
+            watch: WatchClient::new(channel.clone()),
+            lease: LeaseClient::new(channel.clone()),
             channel,
-            interceptor,
         })
     }
 
@@ -156,7 +136,7 @@ impl EtcdClient {
 async fn get_token(endpoint: Uri, name: &str, password: &str) -> Result<String> {
     let channel = new_channel(vec![endpoint]).await?;
 
-    let mut auth_client = AuthClient::new(channel, None);
+    let mut auth_client = AuthClient::new(channel);
 
     auth_client.get_token(name, password).await
 }

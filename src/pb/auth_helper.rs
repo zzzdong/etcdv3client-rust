@@ -11,6 +11,12 @@ impl AuthClient {
     ) -> Result<pb::AuthDisableResponse> {
         Ok(self.inner.auth_disable(request).await?.into_inner())
     }
+    pub async fn auth_status(
+        &mut self,
+        request: pb::AuthStatusRequest,
+    ) -> Result<pb::AuthStatusResponse> {
+        Ok(self.inner.auth_status(request).await?.into_inner())
+    }
     pub async fn authenticate(
         &mut self,
         request: pb::AuthenticateRequest,
@@ -136,6 +142,22 @@ impl<'a> DoAuthDisableRequest<'a> {
         client.auth_disable(request).await
     }
 }
+pub struct DoAuthStatusRequest<'a> {
+    pub request: pb::AuthStatusRequest,
+    pub(crate) client: &'a mut AuthClient,
+}
+impl<'a> DoAuthStatusRequest<'a> {
+    pub fn from_client(client: &'a mut AuthClient) -> Self {
+        DoAuthStatusRequest {
+            request: Default::default(),
+            client,
+        }
+    }
+    pub async fn finish(self) -> Result<pb::AuthStatusResponse> {
+        let DoAuthStatusRequest { request, client } = self;
+        client.auth_status(request).await
+    }
+}
 pub struct DoAuthenticateRequest<'a> {
     pub request: pb::AuthenticateRequest,
     pub(crate) client: &'a mut AuthClient,
@@ -181,6 +203,10 @@ impl<'a> DoAuthUserAddRequest<'a> {
     }
     pub fn with_password(mut self, password: String) -> Self {
         self.request.password = password;
+        self
+    }
+    pub fn with_hashedpassword(mut self, hashed_password: String) -> Self {
+        self.request.hashed_password = hashed_password;
         self
     }
 }
@@ -261,6 +287,10 @@ impl<'a> DoAuthUserChangePasswordRequest<'a> {
     }
     pub fn with_password(mut self, password: String) -> Self {
         self.request.password = password;
+        self
+    }
+    pub fn with_hashedpassword(mut self, hashed_password: String) -> Self {
+        self.request.hashed_password = hashed_password;
         self
     }
 }

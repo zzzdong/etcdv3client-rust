@@ -17,19 +17,14 @@ pub struct LeaseClient {
 }
 
 impl LeaseClient {
-    pub fn new(channel: Channel, interceptor: Option<tonic::Interceptor>) -> Self {
-        let client = match interceptor {
-            Some(i) => PbLeaseClient::with_interceptor(channel, i),
-            None => PbLeaseClient::new(channel),
-        };
-
+    pub fn new(channel: Channel) -> Self {
+        let client = PbLeaseClient::new(channel);
         LeaseClient { inner: client }
     }
 
     pub fn with_client(client: &EtcdClient) -> Self {
         let channel = client.channel.clone();
-        let interceptor = client.interceptor.clone();
-        Self::new(channel, interceptor)
+        Self::new(channel)
     }
 
     pub fn do_grant(&mut self, ttl: i64) -> DoLeaseGrantRequest {

@@ -12,19 +12,16 @@ pub struct KvClient {
 }
 
 impl KvClient {
-    pub fn new(channel: Channel, interceptor: Option<tonic::Interceptor>) -> Self {
-        let client = match interceptor {
-            Some(i) => PbKvClient::with_interceptor(channel, i),
-            None => PbKvClient::new(channel),
-        };
+    pub fn new(channel: Channel) -> Self {
+        let client = PbKvClient::new(channel);
 
         KvClient { inner: client }
     }
 
     pub fn with_client(client: &EtcdClient) -> Self {
         let channel = client.channel.clone();
-        let interceptor = client.interceptor.clone();
-        Self::new(channel, interceptor)
+
+        Self::new(channel)
     }
 
     /// Do range request

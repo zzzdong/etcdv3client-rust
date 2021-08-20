@@ -16,19 +16,15 @@ pub struct WatchClient {
 }
 
 impl WatchClient {
-    pub fn new(channel: Channel, interceptor: Option<tonic::Interceptor>) -> Self {
-        let client = match interceptor {
-            Some(i) => PbWatchClient::with_interceptor(channel, i),
-            None => PbWatchClient::new(channel),
-        };
+    pub fn new(channel: Channel) -> Self {
+        let client = PbWatchClient::new(channel);
 
         WatchClient { inner: client }
     }
 
     pub fn with_client(client: &EtcdClient) -> Self {
         let channel = client.channel.clone();
-        let interceptor = client.interceptor.clone();
-        Self::new(channel, interceptor)
+        Self::new(channel)
     }
 
     /// watch
@@ -93,7 +89,7 @@ impl<'a> DoCreateWatch<'a> {
 
         match resp.message().await? {
             Some(msg) => watch_id = msg.watch_id,
-            None => return Err(EtcdClientError::from(WatchError::StartWatchError)),
+            None => return Err(EtcdClientError::from(WatchError::StartWatchFailed)),
         }
 
         let watcher = Watcher::new(watch_id, req_tx, resp);

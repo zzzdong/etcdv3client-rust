@@ -39,7 +39,7 @@ pub enum WatchError {
     #[error("watch request error")]
     WatchRequestError(#[from] SendError<WatchRequest>),
     #[error("start watch failed")]
-    StartWatchError,
+    StartWatchFailed,
     #[error("watch canceled")]
     WatchCanceled,
     #[error("watch finished")]
