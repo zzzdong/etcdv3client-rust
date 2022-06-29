@@ -3,7 +3,7 @@
 
 protodir=proto
 sources=(api/etcdserverpb/rpc.proto api/mvccpb/kv.proto api/authpb/auth.proto)
-branch="${1:-v3.5.0}"
+branch="${1:-v3.5.4}"
 
 mkdir -p $protodir
 
