@@ -85,14 +85,12 @@ impl<'a> DoCreateWatch<'a> {
 
         let rx = tokio_stream::wrappers::ReceiverStream::new(req_rx);
         let mut resp = client.watch(rx).await?;
-        let watch_id;
 
-        match resp.message().await? {
-            Some(msg) => watch_id = msg.watch_id,
-            None => return Err(EtcdClientError::from(WatchError::StartWatchFailed)),
-        }
-
-        let watcher = Watcher::new(watch_id, req_tx, resp);
+        let watcher = resp
+            .message()
+            .await?
+            .map(|msg| Watcher::new(msg.watch_id, req_tx, resp))
+            .ok_or_else(|| EtcdClientError::from(WatchError::StartWatchFailed))?;
 
         Ok(watcher)
     }
