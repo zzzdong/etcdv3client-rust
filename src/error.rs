@@ -37,13 +37,13 @@ pub enum EtcdClientError {
 #[derive(Error, Debug)]
 pub enum WatchError {
     #[error("watch request error")]
-    WatchRequestError(#[from] SendError<WatchRequest>),
+    RequestError(#[from] SendError<WatchRequest>),
     #[error("start watch failed")]
-    StartWatchError,
+    StartFailed,
     #[error("watch canceled")]
-    WatchCanceled,
+    Canceled,
     #[error("watch finished")]
-    WatchFinished,
+    Finished,
 }
 
 #[derive(Error, Debug)]

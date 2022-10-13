@@ -87,7 +87,7 @@ impl<'a> DoCreateWatch<'a> {
 
         let watch_id= match resp.message().await? {
             Some(msg) => msg.watch_id,
-            None => return Err(EtcdClientError::from(WatchError::StartWatchError)),
+            None => return Err(EtcdClientError::from(WatchError::StartFailed)),
         };
 
         let watcher = Watcher::new(watch_id, req_tx, resp);
@@ -215,7 +215,7 @@ impl Watcher {
         self.req_tx
             .send(request)
             .await
-            .map_err(WatchError::WatchRequestError)?;
+            .map_err(WatchError::RequestError)?;
 
         Ok(())
     }
@@ -226,7 +226,7 @@ impl Watcher {
         self.req_tx
             .send(request)
             .await
-            .map_err(WatchError::WatchRequestError)?;
+            .map_err(WatchError::RequestError)?;
 
         Ok(())
     }
