@@ -1,5 +1,6 @@
 use std::fmt;
 
+use crate::client::Transport;
 use crate::error::{EtcdClientError, Result, WatchError};
 use crate::pb::{self, watch_client::WatchClient as PbWatchClient};
 use crate::utils::build_prefix_end;
@@ -7,28 +8,22 @@ use crate::EtcdClient;
 
 use tokio::sync::mpsc::{channel, Sender};
 use tonic::codec::Streaming;
-use tonic::transport::channel::Channel;
 
 const MPSC_CHANNEL_SIZE: usize = 1;
 
 pub struct WatchClient {
-    inner: PbWatchClient<Channel>,
+    inner: PbWatchClient<Transport>,
 }
 
 impl WatchClient {
-    pub fn new(channel: Channel, interceptor: Option<tonic::Interceptor>) -> Self {
-        let client = match interceptor {
-            Some(i) => PbWatchClient::with_interceptor(channel, i),
-            None => PbWatchClient::new(channel),
-        };
+    pub(crate) fn new(transport: Transport) -> Self {
+        let inner = PbWatchClient::new(transport);
 
-        WatchClient { inner: client }
+        WatchClient { inner }
     }
 
     pub fn with_client(client: &EtcdClient) -> Self {
-        let channel = client.channel.clone();
-        let interceptor = client.interceptor.clone();
-        Self::new(channel, interceptor)
+        Self::new(client.transport.clone())
     }
 
     /// watch
@@ -89,12 +84,11 @@ impl<'a> DoCreateWatch<'a> {
 
         let rx = tokio_stream::wrappers::ReceiverStream::new(req_rx);
         let mut resp = client.watch(rx).await?;
-        let watch_id;
 
-        match resp.message().await? {
-            Some(msg) => watch_id = msg.watch_id,
+        let watch_id= match resp.message().await? {
+            Some(msg) => msg.watch_id,
             None => return Err(EtcdClientError::from(WatchError::StartWatchError)),
-        }
+        };
 
         let watcher = Watcher::new(watch_id, req_tx, resp);
 

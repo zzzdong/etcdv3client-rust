@@ -1,5 +1,4 @@
-use tonic::transport::channel::Channel;
-
+use crate::client::Transport;
 use crate::error::{EtcdClientError, Result};
 use crate::pb::{self, kv_client::KvClient as PbKvClient};
 use crate::utils::build_prefix_end;
@@ -8,23 +7,18 @@ use crate::EtcdClient;
 use helper::*;
 
 pub struct KvClient {
-    inner: PbKvClient<Channel>,
+    inner: PbKvClient<Transport>,
 }
 
 impl KvClient {
-    pub fn new(channel: Channel, interceptor: Option<tonic::Interceptor>) -> Self {
-        let client = match interceptor {
-            Some(i) => PbKvClient::with_interceptor(channel, i),
-            None => PbKvClient::new(channel),
-        };
+    pub(crate) fn new(transport: Transport) -> Self {
+        let inner = PbKvClient::new(transport);
 
-        KvClient { inner: client }
+        KvClient { inner }
     }
 
     pub fn with_client(client: &EtcdClient) -> Self {
-        let channel = client.channel.clone();
-        let interceptor = client.interceptor.clone();
-        Self::new(channel, interceptor)
+        Self::new(client.transport.clone())
     }
 
     /// Do range request

@@ -1,4 +1,5 @@
 use crate::error::{EtcdClientError, Result};
+use crate::interceptor::InsertTokenHeader;
 use crate::pb;
 
 use crate::auth::AuthClient;
@@ -7,10 +8,11 @@ use crate::lease::{LeaseClient, LeaseKeepAliver};
 use crate::watch::{WatchClient, Watcher};
 
 use http::Uri;
+use tonic::codegen::InterceptedService;
 use tonic::transport::{channel::Channel, Endpoint};
-use tonic::{metadata::MetadataValue, Request};
 
-pub(crate) const TOKEN_ID: &str = "token";
+pub(crate) type Transport =
+    InterceptedService<tonic::transport::channel::Channel, InsertTokenHeader>;
 
 pub struct EtcdClient {
     pub kv: KvClient,
@@ -18,8 +20,7 @@ pub struct EtcdClient {
     pub watch: WatchClient,
     pub lease: LeaseClient,
 
-    pub(crate) channel: Channel,
-    pub(crate) interceptor: Option<tonic::Interceptor>,
+    pub(crate) transport: Transport,
 }
 
 impl EtcdClient {
@@ -57,28 +58,14 @@ impl EtcdClient {
 
         let channel = new_channel(ep_uris).await?;
 
-        let mut interceptor = None;
-        if let Some(t) = token {
-            let token = MetadataValue::from_str(&t).unwrap();
-            interceptor = Some(
-                {
-                    move |mut req: Request<()>| {
-                        req.metadata_mut().insert(TOKEN_ID, token.clone());
-
-                        Ok(req)
-                    }
-                }
-                .into(),
-            )
-        }
+        let transport = InterceptedService::new(channel, InsertTokenHeader::new(token));
 
         Ok(EtcdClient {
-            auth: AuthClient::new(channel.clone(), interceptor.clone()),
-            kv: KvClient::new(channel.clone(), interceptor.clone()),
-            watch: WatchClient::new(channel.clone(), interceptor.clone()),
-            lease: LeaseClient::new(channel.clone(), interceptor.clone()),
-            channel,
-            interceptor,
+            auth: AuthClient::new(transport.clone()),
+            kv: KvClient::new(transport.clone()),
+            watch: WatchClient::new(transport.clone()),
+            lease: LeaseClient::new(transport.clone()),
+            transport,
         })
     }
 
@@ -154,9 +141,11 @@ impl EtcdClient {
 }
 
 async fn get_token(endpoint: Uri, name: &str, password: &str) -> Result<String> {
-    let channel = new_channel(vec![endpoint]).await?;
+    let channel = connect_to(endpoint).await?;
 
-    let mut auth_client = AuthClient::new(channel, None);
+    let transport = InterceptedService::new(channel, InsertTokenHeader::empty());
+
+    let mut auth_client = AuthClient::new(transport);
 
     auth_client.get_token(name, password).await
 }
@@ -173,4 +162,11 @@ async fn new_channel(endpoints: Vec<Uri>) -> Result<Channel> {
         1 => eps[0].connect().await.map_err(EtcdClientError::from),
         _ => Ok(Channel::balance_list(eps.into_iter())),
     }
+}
+
+async fn connect_to(endpoint: Uri) -> Result<Channel> {
+    Channel::builder(endpoint)
+        .connect()
+        .await
+        .map_err(EtcdClientError::from)
 }

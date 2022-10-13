@@ -2,8 +2,8 @@ use std::fmt;
 
 use tokio::sync::mpsc::{channel, Sender};
 use tonic::codec::Streaming;
-use tonic::transport::channel::Channel;
 
+use crate::client::Transport;
 use crate::error::{LeaseError, Result};
 use crate::pb::{self, lease_client::LeaseClient as PbLeaseClient};
 use crate::EtcdClient;
@@ -13,23 +13,18 @@ use helper::*;
 const MPSC_CHANNEL_SIZE: usize = 1;
 
 pub struct LeaseClient {
-    inner: PbLeaseClient<Channel>,
+    inner: PbLeaseClient<Transport>,
 }
 
 impl LeaseClient {
-    pub fn new(channel: Channel, interceptor: Option<tonic::Interceptor>) -> Self {
-        let client = match interceptor {
-            Some(i) => PbLeaseClient::with_interceptor(channel, i),
-            None => PbLeaseClient::new(channel),
-        };
+    pub(crate) fn new(transport: Transport) -> Self {
+        let inner = PbLeaseClient::new(transport);
 
-        LeaseClient { inner: client }
+        LeaseClient { inner }
     }
 
     pub fn with_client(client: &EtcdClient) -> Self {
-        let channel = client.channel.clone();
-        let interceptor = client.interceptor.clone();
-        Self::new(channel, interceptor)
+        Self::new(client.transport.clone())
     }
 
     pub fn do_grant(&mut self, ttl: i64) -> DoLeaseGrantRequest {

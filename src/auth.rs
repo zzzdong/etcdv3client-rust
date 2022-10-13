@@ -1,29 +1,23 @@
+use crate::client::Transport;
 use crate::error::Result;
 use crate::pb::{self, auth_client::AuthClient as PbAuthClient};
 use crate::EtcdClient;
 
 use helper::*;
 
-use tonic::transport::channel::Channel;
-
 pub struct AuthClient {
-    inner: PbAuthClient<Channel>,
+    inner: PbAuthClient<Transport>,
 }
 
 impl AuthClient {
-    pub fn new(channel: Channel, interceptor: Option<tonic::Interceptor>) -> Self {
-        let client = match interceptor {
-            Some(i) => PbAuthClient::with_interceptor(channel, i),
-            None => PbAuthClient::new(channel),
-        };
+    pub(crate) fn new(transport: Transport) -> Self {
+        let inner = PbAuthClient::new(transport);
 
-        AuthClient { inner: client }
+        AuthClient { inner }
     }
 
     pub fn with_client(client: &EtcdClient) -> Self {
-        let channel = client.channel.clone();
-        let interceptor = client.interceptor.clone();
-        Self::new(channel, interceptor)
+        Self::new(client.transport.clone())
     }
 
     pub fn do_auth_enable(&mut self) -> DoAuthEnableRequest {
