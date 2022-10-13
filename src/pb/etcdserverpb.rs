@@ -746,6 +746,8 @@ pub struct MemberUpdateResponse {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MemberListRequest {
+    #[prost(bool, tag="1")]
+    pub linearizable: bool,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MemberListResponse {
@@ -844,6 +846,48 @@ pub struct AlarmResponse {
     pub alarms: ::prost::alloc::vec::Vec<AlarmMember>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DowngradeRequest {
+    /// action is the kind of downgrade request to issue. The action may
+    /// VALIDATE the target version, DOWNGRADE the cluster version,
+    /// or CANCEL the current downgrading job.
+    #[prost(enumeration="downgrade_request::DowngradeAction", tag="1")]
+    pub action: i32,
+    /// version is the target version to downgrade.
+    #[prost(string, tag="2")]
+    pub version: ::prost::alloc::string::String,
+}
+/// Nested message and enum types in `DowngradeRequest`.
+pub mod downgrade_request {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+    #[repr(i32)]
+    pub enum DowngradeAction {
+        Validate = 0,
+        Enable = 1,
+        Cancel = 2,
+    }
+    impl DowngradeAction {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                DowngradeAction::Validate => "VALIDATE",
+                DowngradeAction::Enable => "ENABLE",
+                DowngradeAction::Cancel => "CANCEL",
+            }
+        }
+    }
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DowngradeResponse {
+    #[prost(message, optional, tag="1")]
+    pub header: ::core::option::Option<ResponseHeader>,
+    /// version is the current cluster version.
+    #[prost(string, tag="2")]
+    pub version: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct StatusRequest {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -885,6 +929,9 @@ pub struct AuthEnableRequest {
 pub struct AuthDisableRequest {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct AuthStatusRequest {
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthenticateRequest {
     #[prost(string, tag="1")]
     pub name: ::prost::alloc::string::String,
@@ -899,6 +946,8 @@ pub struct AuthUserAddRequest {
     pub password: ::prost::alloc::string::String,
     #[prost(message, optional, tag="3")]
     pub options: ::core::option::Option<super::authpb::UserAddOptions>,
+    #[prost(string, tag="4")]
+    pub hashed_password: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthUserGetRequest {
@@ -916,9 +965,12 @@ pub struct AuthUserChangePasswordRequest {
     /// name is the name of the user whose password is being changed.
     #[prost(string, tag="1")]
     pub name: ::prost::alloc::string::String,
-    /// password is the new password for the user.
+    /// password is the new password for the user. Note that this field will be removed in the API layer.
     #[prost(string, tag="2")]
     pub password: ::prost::alloc::string::String,
+    /// hashedPassword is the new password for the user. Note that this field will be initialized in the API layer.
+    #[prost(string, tag="3")]
+    pub hashed_password: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthUserGrantRoleRequest {
@@ -985,6 +1037,16 @@ pub struct AuthEnableResponse {
 pub struct AuthDisableResponse {
     #[prost(message, optional, tag="1")]
     pub header: ::core::option::Option<ResponseHeader>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct AuthStatusResponse {
+    #[prost(message, optional, tag="1")]
+    pub header: ::core::option::Option<ResponseHeader>,
+    #[prost(bool, tag="2")]
+    pub enabled: bool,
+    /// authRevision is the current revision of auth store
+    #[prost(uint64, tag="3")]
+    pub auth_revision: u64,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AuthenticateResponse {
@@ -1926,6 +1988,28 @@ pub mod maintenance_client {
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
+        /// Downgrade requests downgrades, verifies feasibility or cancels downgrade
+        /// on the cluster version.
+        /// Supported since etcd 3.5.
+        pub async fn downgrade(
+            &mut self,
+            request: impl tonic::IntoRequest<super::DowngradeRequest>,
+        ) -> Result<tonic::Response<super::DowngradeResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/etcdserverpb.Maintenance/Downgrade",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
     }
 }
 /// Generated client implementations.
@@ -2034,6 +2118,26 @@ pub mod auth_client {
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/etcdserverpb.Auth/AuthDisable",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// AuthStatus displays authentication status.
+        pub async fn auth_status(
+            &mut self,
+            request: impl tonic::IntoRequest<super::AuthStatusRequest>,
+        ) -> Result<tonic::Response<super::AuthStatusResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/etcdserverpb.Auth/AuthStatus",
             );
             self.inner.unary(request.into_request(), path, codec).await
         }

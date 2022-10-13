@@ -58,7 +58,7 @@ impl AuthClient {
         name: impl AsRef<str>,
         password: impl AsRef<str>,
     ) -> DoAuthUserAddRequest {
-        DoAuthUserAddRequest::new(name, password, self)
+        DoAuthUserAddRequest::new(name, password, "", self)
     }
 
     pub async fn add_user(
@@ -120,10 +120,11 @@ impl<'a> DoAuthenticateRequest<'a> {
 }
 
 impl pb::AuthUserAddRequest {
-    pub fn new(name: impl AsRef<str>, password: impl AsRef<str>) -> Self {
+    pub fn new(name: impl AsRef<str>, password: impl AsRef<str>, hashed_password: impl AsRef<str>) -> Self {
         pb::AuthUserAddRequest {
             name: name.as_ref().to_string(),
             password: password.as_ref().to_string(),
+            hashed_password: hashed_password.as_ref().to_string(),
             options: None,
         }
     }
@@ -137,10 +138,11 @@ impl<'a> DoAuthUserAddRequest<'a> {
     pub fn new(
         name: impl AsRef<str>,
         password: impl AsRef<str>,
+        hashed_password: impl AsRef<str>,
         client: &'a mut AuthClient,
     ) -> Self {
         DoAuthUserAddRequest {
-            request: pb::AuthUserAddRequest::new(name, password),
+            request: pb::AuthUserAddRequest::new(name, password, hashed_password),
             client,
         }
     }

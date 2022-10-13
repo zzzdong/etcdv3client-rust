@@ -2,8 +2,8 @@
 # take from https://github.com/mindriot101/rust-etcd3
 
 protodir=proto
-sources=(etcdserver/etcdserverpb/rpc.proto mvcc/mvccpb/kv.proto auth/authpb/auth.proto)
-branch="${1:-v3.4.14}"
+sources=(api/etcdserverpb/rpc.proto api/mvccpb/kv.proto api/authpb/auth.proto)
+branch="${1:-v3.5.5}"
 
 mkdir -p $protodir
 

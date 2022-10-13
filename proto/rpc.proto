@@ -129,6 +129,12 @@ service Maintenance {
   // MoveLeader requests current leader node to transfer its leadership to transferee.
   rpc MoveLeader(MoveLeaderRequest) returns (MoveLeaderResponse) {
   }
+
+  // Downgrade requests downgrades, verifies feasibility or cancels downgrade
+  // on the cluster version.
+  // Supported since etcd 3.5.
+  rpc Downgrade(DowngradeRequest) returns (DowngradeResponse) {
+  }
 }
 
 service Auth {
@@ -138,6 +144,10 @@ service Auth {
 
   // AuthDisable disables authentication.
   rpc AuthDisable(AuthDisableRequest) returns (AuthDisableResponse) {
+  }
+
+  // AuthStatus displays authentication status.
+  rpc AuthStatus(AuthStatusRequest) returns (AuthStatusResponse) {
   }
 
   // Authenticate processes an authenticate request.
@@ -726,6 +736,7 @@ message MemberUpdateResponse{
 }
 
 message MemberListRequest {
+  bool linearizable = 1;
 }
 
 message MemberListResponse {
@@ -797,6 +808,27 @@ message AlarmResponse {
   repeated AlarmMember alarms = 2;
 }
 
+message DowngradeRequest {
+  enum DowngradeAction {
+    VALIDATE = 0;
+    ENABLE = 1;
+    CANCEL = 2;
+  }
+
+  // action is the kind of downgrade request to issue. The action may
+  // VALIDATE the target version, DOWNGRADE the cluster version,
+  // or CANCEL the current downgrading job.
+  DowngradeAction action = 1;
+  // version is the target version to downgrade.
+  string version = 2;
+}
+
+message DowngradeResponse {
+  ResponseHeader header = 1;
+  // version is the current cluster version.
+  string version = 2;
+}
+
 message StatusRequest {
 }
 
@@ -828,6 +860,9 @@ message AuthEnableRequest {
 message AuthDisableRequest {
 }
 
+message AuthStatusRequest {
+}
+
 message AuthenticateRequest {
   string name = 1;
   string password = 2;
@@ -837,6 +872,7 @@ message AuthUserAddRequest {
   string name = 1;
   string password = 2;
   authpb.UserAddOptions options = 3;
+  string hashedPassword = 4;
 }
 
 message AuthUserGetRequest {
@@ -851,8 +887,10 @@ message AuthUserDeleteRequest {
 message AuthUserChangePasswordRequest {
   // name is the name of the user whose password is being changed.
   string name = 1;
-  // password is the new password for the user.
+  // password is the new password for the user. Note that this field will be removed in the API layer.
   string password = 2;
+  // hashedPassword is the new password for the user. Note that this field will be initialized in the API layer.
+  string hashedPassword = 3;
 }
 
 message AuthUserGrantRoleRequest {
@@ -905,6 +943,13 @@ message AuthEnableResponse {
 
 message AuthDisableResponse {
   ResponseHeader header = 1;
+}
+
+message AuthStatusResponse {
+  ResponseHeader header = 1;
+  bool enabled = 2;
+  // authRevision is the current revision of auth store
+  uint64 authRevision = 3;
 }
 
 message AuthenticateResponse {
