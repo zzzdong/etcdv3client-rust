@@ -25,7 +25,7 @@ impl AuthClient {
     }
 
     pub async fn enable_auth(&mut self) -> Result<()> {
-        self.do_auth_enable().finish().await.map(|_| ())
+        self.do_auth_enable().await.map(|_| ())
     }
 
     pub fn do_auth_disable(&mut self) -> DoAuthDisableRequest {
@@ -33,7 +33,7 @@ impl AuthClient {
     }
 
     pub async fn disable_auth(&mut self) -> Result<()> {
-        self.do_auth_disable().finish().await.map(|_| ())
+        self.do_auth_disable().await.map(|_| ())
     }
 
     pub fn do_authenticate(
@@ -49,7 +49,7 @@ impl AuthClient {
         name: impl AsRef<str>,
         password: impl AsRef<str>,
     ) -> Result<String> {
-        let resp = self.do_authenticate(name, password).finish().await?;
+        let resp = self.do_authenticate(name, password).await?;
         Ok(resp.token)
     }
 
@@ -66,7 +66,7 @@ impl AuthClient {
         name: impl AsRef<str>,
         password: impl AsRef<str>,
     ) -> Result<()> {
-        let _resp = self.do_user_add(name, password).finish().await?;
+        let _resp = self.do_user_add(name, password).await?;
         Ok(())
     }
 
@@ -75,7 +75,7 @@ impl AuthClient {
     }
 
     pub async fn get_user(&mut self, name: impl AsRef<str>) -> Result<pb::AuthUserGetResponse> {
-        self.do_user_get(name).finish().await
+        self.do_user_get(name).await
     }
 }
 
@@ -120,7 +120,11 @@ impl<'a> DoAuthenticateRequest<'a> {
 }
 
 impl pb::AuthUserAddRequest {
-    pub fn new(name: impl AsRef<str>, password: impl AsRef<str>, hashed_password: impl AsRef<str>) -> Self {
+    pub fn new(
+        name: impl AsRef<str>,
+        password: impl AsRef<str>,
+        hashed_password: impl AsRef<str>,
+    ) -> Self {
         pb::AuthUserAddRequest {
             name: name.as_ref().to_string(),
             password: password.as_ref().to_string(),

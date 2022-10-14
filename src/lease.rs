@@ -1,4 +1,6 @@
 use std::fmt;
+use std::future::{Future, IntoFuture};
+use std::pin::Pin;
 
 use tokio::sync::mpsc::{channel, Sender};
 use tonic::codec::Streaming;
@@ -32,7 +34,7 @@ impl LeaseClient {
     }
 
     pub async fn grant(&mut self, ttl: i64, lease_id: i64) -> Result<pb::LeaseGrantResponse> {
-        self.do_grant(ttl).with_lease_id(lease_id).finish().await
+        self.do_grant(ttl).with_lease_id(lease_id).await
     }
 
     pub async fn revoke(&mut self, lease_id: i64) -> Result<()> {
@@ -55,7 +57,7 @@ impl LeaseClient {
     /// Keep the lease alive.
     /// When call, it sent the first keep alive message and return LeaseKeepAliver for further call.
     pub async fn keep_alive(&mut self, lease_id: i64) -> Result<LeaseKeepAliver> {
-        self.do_keep_alive(lease_id).finish().await
+        self.do_keep_alive(lease_id).await
     }
 
     pub async fn get_lease_info(
@@ -114,7 +116,7 @@ impl<'a> DoLeaseKeepAlive<'a> {
         DoLeaseKeepAlive { lease_id, client }
     }
 
-    pub async fn finish(self) -> Result<LeaseKeepAliver> {
+    async fn send(self) -> Result<LeaseKeepAliver> {
         let DoLeaseKeepAlive { lease_id, client } = self;
 
         let (req_tx, req_rx) = channel::<pb::LeaseKeepAliveRequest>(MPSC_CHANNEL_SIZE);
@@ -134,6 +136,15 @@ impl<'a> fmt::Debug for DoLeaseKeepAlive<'a> {
         f.debug_struct("DoLeaseKeepAlive")
             .field("lease_id", &self.lease_id)
             .finish()
+    }
+}
+
+impl<'a> IntoFuture for DoLeaseKeepAlive<'a> {
+    type Output = Result<LeaseKeepAliver>;
+    type IntoFuture = Pin<Box<dyn Future<Output = Result<LeaseKeepAliver>> + 'a>>;
+
+    fn into_future(self) -> Self::IntoFuture {
+        Box::pin(self.send())
     }
 }
 

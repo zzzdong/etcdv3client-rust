@@ -20,12 +20,7 @@ async fn main() -> Result<(), EtcdClientError> {
     let leases = client.list_leases().await?;
     println!("got all lease: {:?}", leases);
 
-    client
-        .kv
-        .do_put(key, world)
-        .with_lease(lease.id)
-        .finish()
-        .await?;
+    client.kv.do_put(key, world).with_lease(lease.id).await?;
     println!("put {}-{} done at {:?}", key, world, start.elapsed());
 
     sleep(Duration::from_secs(1)).await;
@@ -46,12 +41,7 @@ async fn main() -> Result<(), EtcdClientError> {
     let start = std::time::Instant::now();
     let lease = client.grant_lease(3, 0).await?;
 
-    client
-        .kv
-        .do_put(key, world)
-        .with_lease(lease.id)
-        .finish()
-        .await?;
+    client.kv.do_put(key, world).with_lease(lease.id).await?;
 
     println!("put {} with {:?} at {:?} done", key, world, start.elapsed());
 

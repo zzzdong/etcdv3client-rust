@@ -51,6 +51,10 @@ More examples can be found in [`examples`].
 - [ ] Maintenance
 - [ ] Auth
 
+## Supported Rust Versions
+
+ The current MSRV is 1.64.0.
+
 ## License
 
 This project is licensed under the [MIT license](LICENSE).

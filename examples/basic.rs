@@ -14,6 +14,8 @@ async fn main() -> Result<(), EtcdClientError> {
         }
         Err(EtcdClientError::KeyNotFound) => {
             eprintln!("can not find `{}`", key);
+            client.kv.do_put(key, "world").await?;
+            println!("put hello done");
         }
         Err(e) => {
             eprintln!("etcd get error: `{:?}`", e);

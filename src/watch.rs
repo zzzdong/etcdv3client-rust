@@ -1,4 +1,6 @@
 use std::fmt;
+use std::future::{Future, IntoFuture};
+use std::pin::Pin;
 
 use crate::client::Transport;
 use crate::error::{EtcdClientError, Result, WatchError};
@@ -33,7 +35,7 @@ impl WatchClient {
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), EtcdClientError> {
     /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
-    /// let resp = WatchClient::with_client(&client).do_watch("hello").with_prefix().finish().await.unwrap();
+    /// let resp = WatchClient::with_client(&client).do_watch("hello").with_prefix().await.unwrap();
     /// # Ok(())
     /// # }
     pub fn do_watch(&mut self, key: impl AsRef<[u8]>) -> DoCreateWatch {
@@ -49,12 +51,12 @@ impl WatchClient {
 
     /// watch a key
     pub async fn watch_key(&mut self, key: impl AsRef<[u8]>) -> Result<Watcher> {
-        self.do_watch(key).finish().await
+        self.do_watch(key).await
     }
 
     /// watch a key with prefix
     pub async fn watch_prefix(&mut self, key: impl AsRef<[u8]>) -> Result<Watcher> {
-        self.do_watch(key).with_prefix().finish().await
+        self.do_watch(key).with_prefix().await
     }
 }
 
@@ -71,7 +73,7 @@ impl<'a> DoCreateWatch<'a> {
         }
     }
 
-    pub async fn finish(self) -> Result<Watcher> {
+    async fn send(self) -> Result<Watcher> {
         let DoCreateWatch { request, client } = self;
 
         let create_watch = pb::watch_request::RequestUnion::CreateRequest(request);
@@ -85,7 +87,7 @@ impl<'a> DoCreateWatch<'a> {
         let rx = tokio_stream::wrappers::ReceiverStream::new(req_rx);
         let mut resp = client.watch(rx).await?;
 
-        let watch_id= match resp.message().await? {
+        let watch_id = match resp.message().await? {
             Some(msg) => msg.watch_id,
             None => return Err(EtcdClientError::from(WatchError::StartFailed)),
         };
@@ -119,6 +121,15 @@ impl<'a> fmt::Debug for DoCreateWatch<'a> {
         f.debug_struct("DoCreateWatch")
             .field("request", &self.request)
             .finish()
+    }
+}
+
+impl<'a> IntoFuture for DoCreateWatch<'a> {
+    type Output = Result<Watcher>;
+    type IntoFuture = Pin<Box<dyn Future<Output = Result<Watcher>> + 'a>>;
+
+    fn into_future(self) -> Self::IntoFuture {
+        Box::pin(self.send())
     }
 }
 

@@ -32,10 +32,6 @@ impl<'a> DoRangeRequest<'a> {
             client,
         }
     }
-    pub async fn finish(self) -> Result<pb::RangeResponse> {
-        let DoRangeRequest { request, client } = self;
-        client.range(request).await
-    }
     pub fn with_key(mut self, key: Vec<u8>) -> Self {
         self.request.key = key;
         self
@@ -89,6 +85,16 @@ impl<'a> DoRangeRequest<'a> {
         self
     }
 }
+impl<'a> std::future::IntoFuture for DoRangeRequest<'a> {
+    type Output = Result<pb::RangeResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::RangeResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoRangeRequest { request, client } = self;
+        Box::pin(async move { client.range(request).await })
+    }
+}
 pub struct DoPutRequest<'a> {
     pub request: pb::PutRequest,
     pub(crate) client: &'a mut KvClient,
@@ -99,10 +105,6 @@ impl<'a> DoPutRequest<'a> {
             request: Default::default(),
             client,
         }
-    }
-    pub async fn finish(self) -> Result<pb::PutResponse> {
-        let DoPutRequest { request, client } = self;
-        client.put(request).await
     }
     pub fn with_key(mut self, key: Vec<u8>) -> Self {
         self.request.key = key;
@@ -129,6 +131,16 @@ impl<'a> DoPutRequest<'a> {
         self
     }
 }
+impl<'a> std::future::IntoFuture for DoPutRequest<'a> {
+    type Output = Result<pb::PutResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::PutResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoPutRequest { request, client } = self;
+        Box::pin(async move { client.put(request).await })
+    }
+}
 pub struct DoDeleteRangeRequest<'a> {
     pub request: pb::DeleteRangeRequest,
     pub(crate) client: &'a mut KvClient,
@@ -139,10 +151,6 @@ impl<'a> DoDeleteRangeRequest<'a> {
             request: Default::default(),
             client,
         }
-    }
-    pub async fn finish(self) -> Result<pb::DeleteRangeResponse> {
-        let DoDeleteRangeRequest { request, client } = self;
-        client.delete_range(request).await
     }
     pub fn with_key(mut self, key: Vec<u8>) -> Self {
         self.request.key = key;
@@ -157,6 +165,16 @@ impl<'a> DoDeleteRangeRequest<'a> {
         self
     }
 }
+impl<'a> std::future::IntoFuture for DoDeleteRangeRequest<'a> {
+    type Output = Result<pb::DeleteRangeResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::DeleteRangeResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoDeleteRangeRequest { request, client } = self;
+        Box::pin(async move { client.delete_range(request).await })
+    }
+}
 pub struct DoTxnRequest<'a> {
     pub request: pb::TxnRequest,
     pub(crate) client: &'a mut KvClient,
@@ -168,9 +186,15 @@ impl<'a> DoTxnRequest<'a> {
             client,
         }
     }
-    pub async fn finish(self) -> Result<pb::TxnResponse> {
+}
+impl<'a> std::future::IntoFuture for DoTxnRequest<'a> {
+    type Output = Result<pb::TxnResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::TxnResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
         let DoTxnRequest { request, client } = self;
-        client.txn(request).await
+        Box::pin(async move { client.txn(request).await })
     }
 }
 pub struct DoCompactionRequest<'a> {
@@ -184,10 +208,6 @@ impl<'a> DoCompactionRequest<'a> {
             client,
         }
     }
-    pub async fn finish(self) -> Result<pb::CompactionResponse> {
-        let DoCompactionRequest { request, client } = self;
-        client.compact(request).await
-    }
     pub fn with_revision(mut self, revision: i64) -> Self {
         self.request.revision = revision;
         self
@@ -195,5 +215,15 @@ impl<'a> DoCompactionRequest<'a> {
     pub fn with_physical(mut self, physical: bool) -> Self {
         self.request.physical = physical;
         self
+    }
+}
+impl<'a> std::future::IntoFuture for DoCompactionRequest<'a> {
+    type Output = Result<pb::CompactionResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::CompactionResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoCompactionRequest { request, client } = self;
+        Box::pin(async move { client.compact(request).await })
     }
 }

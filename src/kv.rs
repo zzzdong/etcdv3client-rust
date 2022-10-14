@@ -28,7 +28,7 @@ impl KvClient {
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), EtcdClientError> {
     /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
-    /// let resp = KvClient::with_client(&client).do_range("hello").with_prefix().finish().await.unwrap();
+    /// let resp = KvClient::with_client(&client).do_range("hello").with_prefix().await.unwrap();
     /// # Ok(())
     /// # }
     /// ```
@@ -39,7 +39,7 @@ impl KvClient {
     /// Get value by key
     #[inline]
     pub async fn get(&mut self, key: impl AsRef<[u8]>) -> Result<Vec<u8>> {
-        let resp = self.do_range(key).finish().await?;
+        let resp = self.do_range(key).await?;
         let kv = resp.kvs.first().ok_or(EtcdClientError::KeyNotFound)?;
         Ok(kv.value.clone())
     }
@@ -65,7 +65,7 @@ impl KvClient {
     /// Get key-value pairs with prefix
     #[inline]
     pub async fn get_with_prefix(&mut self, key: impl AsRef<[u8]>) -> Result<Vec<pb::KeyValue>> {
-        let resp = self.do_range(key).with_prefix().finish().await?;
+        let resp = self.do_range(key).with_prefix().await?;
 
         Ok(resp.kvs.to_vec())
     }
@@ -73,11 +73,7 @@ impl KvClient {
     /// Get all key-value pairs
     #[inline]
     pub async fn all(&mut self) -> Result<Vec<pb::KeyValue>> {
-        let resp = self
-            .do_range([0x00])
-            .with_range_end(vec![0x00])
-            .finish()
-            .await?;
+        let resp = self.do_range([0x00]).with_range_end(vec![0x00]).await?;
 
         Ok(resp.kvs.to_vec())
     }
@@ -89,7 +85,7 @@ impl KvClient {
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), EtcdClientError> {
     /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
-    /// let resp = KvClient::with_client(&client).do_put("hello", "world").with_prev_kv(true).finish().await.unwrap();
+    /// let resp = KvClient::with_client(&client).do_put("hello", "world").with_prev_kv(true).await.unwrap();
     /// # Ok(())
     /// # }
     pub fn do_put(&mut self, key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> DoPutRequest {
@@ -98,7 +94,7 @@ impl KvClient {
 
     /// Put a key-value paire
     pub async fn put_kv(&mut self, key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> Result<()> {
-        self.do_put(key, value).finish().await.map(|_| ())
+        self.do_put(key, value).await.map(|_| ())
     }
 
     /// Do delete range request
@@ -108,7 +104,7 @@ impl KvClient {
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), EtcdClientError> {
     /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
-    /// let resp = KvClient::with_client(&client).do_delete_range("hello").with_prefix().finish().await.unwrap();
+    /// let resp = KvClient::with_client(&client).do_delete_range("hello").with_prefix().await.unwrap();
     /// # Ok(())
     /// # }
     pub fn do_delete_range(&mut self, key: impl AsRef<[u8]>) -> DoDeleteRangeRequest {
@@ -117,7 +113,7 @@ impl KvClient {
 
     /// Delete a key-value paire
     pub async fn delete(&mut self, key: impl AsRef<[u8]>) -> Result<()> {
-        self.do_delete_range(key).finish().await.map(|_| ())
+        self.do_delete_range(key).await.map(|_| ())
     }
 
     pub fn do_txn(&mut self) -> DoTxnRequest {
@@ -130,7 +126,7 @@ impl KvClient {
 
     /// Compact compacts the event history in the etcd key-value store.
     pub async fn compact_history(&mut self, revision: i64, physical: bool) -> Result<()> {
-        let _resp = self.do_compaction(revision, physical).finish().await?;
+        let _resp = self.do_compaction(revision, physical).await?;
         Ok(())
     }
 }

@@ -40,7 +40,7 @@ async fn main() -> Result<(), EtcdClientError> {
     let mut watcher = client.watch(key).await?;
 
     // use middle level api.
-    client.kv.do_put(key, &value).finish().await?;
+    client.kv.do_put(key, &value).await?;
 
     // read the watch event
     let mut n: i32 = 0;
