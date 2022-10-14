@@ -1,32 +1,34 @@
 use std::convert::TryFrom;
+use std::sync::{Arc, RwLock};
 
 use tonic::{metadata::MetadataValue, service::Interceptor};
 
-pub(crate) const TOKEN_ID: &str = "token";
+pub(crate) const TOKEN_FIELD_NAME: &str = "token";
 
 #[derive(Debug, Clone)]
-pub(crate) struct InsertTokenHeader {
-    token: Option<String>,
+pub(crate) struct CredentialInterceptor {
+    token: Arc<RwLock<String>>,
 }
 
-impl InsertTokenHeader {
-    pub(crate) fn new(token: Option<String>) -> Self {
-        InsertTokenHeader { token }
+impl CredentialInterceptor {
+    pub(crate) fn new(token: Arc<RwLock<String>>) -> Self {
+        CredentialInterceptor { token }
     }
 
     pub fn empty() -> Self {
-        Self::new(None)
+        Self::new(Arc::new(RwLock::new(String::new())))
     }
 }
 
-impl Interceptor for InsertTokenHeader {
+impl Interceptor for CredentialInterceptor {
     fn call(
         &mut self,
         mut request: tonic::Request<()>,
     ) -> std::result::Result<tonic::Request<()>, tonic::Status> {
-        if let Some(ref t) = self.token {
-            let token = MetadataValue::try_from(t).unwrap();
-            request.metadata_mut().insert(TOKEN_ID, token);
+        let token = self.token.read().unwrap();
+        if !token.is_empty() {
+            let token = MetadataValue::try_from(token.as_str()).unwrap();
+            request.metadata_mut().insert(TOKEN_FIELD_NAME, token);
         }
 
         Ok(request)

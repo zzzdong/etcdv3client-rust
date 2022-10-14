@@ -22,8 +22,8 @@ pub enum EtcdClientError {
     GRPCError(#[from] tonic::Status),
     #[error("transport error")]
     TransportError(#[from] tonic::transport::Error),
-    #[error("error message: {0}")]
-    ErrMsg(String),
+    #[error("auth failed")]
+    AuthFailed,
     #[error("key not found")]
     KeyNotFound,
     #[error("endpoint error")]
@@ -32,6 +32,8 @@ pub enum EtcdClientError {
     WatchError(#[from] WatchError),
     #[error("lease error")]
     LeaseError(#[from] LeaseError),
+    #[error("error message: {0}")]
+    ErrMsg(String),
 }
 
 #[derive(Error, Debug)]

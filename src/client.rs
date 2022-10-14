@@ -1,5 +1,7 @@
+use std::sync::{Arc, RwLock};
+
 use crate::error::{EtcdClientError, Result};
-use crate::interceptor::InsertTokenHeader;
+use crate::interceptor::CredentialInterceptor;
 use crate::pb;
 
 use crate::auth::AuthClient;
@@ -12,7 +14,7 @@ use tonic::codegen::InterceptedService;
 use tonic::transport::{channel::Channel, Endpoint};
 
 pub(crate) type Transport =
-    InterceptedService<tonic::transport::channel::Channel, InsertTokenHeader>;
+    InterceptedService<tonic::transport::channel::Channel, CredentialInterceptor>;
 
 pub struct EtcdClient {
     pub kv: KvClient,
@@ -21,13 +23,16 @@ pub struct EtcdClient {
     pub lease: LeaseClient,
 
     pub(crate) transport: Transport,
+
+    credential: Option<(String, String)>,
+    token: Arc<RwLock<String>>,
 }
 
 impl EtcdClient {
     /// Create a new EtcdClient
     pub async fn new(
         endpoints: Vec<impl AsRef<str>>,
-        auth: Option<(String, String)>,
+        credential: Option<(String, String)>,
     ) -> Result<Self> {
         let mut ep_uris = Vec::new();
 
@@ -40,25 +45,17 @@ impl EtcdClient {
             ep_uris.push(uri);
         }
 
-        let mut token = None;
-
         // try to get token
-        if let Some((name, password)) = auth {
-            for ep in &ep_uris {
-                if let Ok(t) = get_token(ep.clone(), &name, &password).await {
-                    token = Some(t);
-                    break;
-                }
-            }
-            // after try all, report error when not got.
-            if token.is_none() {
-                return Err(EtcdClientError::ErrMsg("can not get token".to_string()));
-            }
-        }
+        let token = if let Some((name, password)) = &credential {
+            get_token(&ep_uris, name, password).await?
+        } else {
+            String::new()
+        };
 
         let channel = new_channel(ep_uris).await?;
+        let token = Arc::new(RwLock::new(token));
 
-        let transport = InterceptedService::new(channel, InsertTokenHeader::new(token));
+        let transport = InterceptedService::new(channel, CredentialInterceptor::new(token.clone()));
 
         Ok(EtcdClient {
             auth: AuthClient::new(transport.clone()),
@@ -66,6 +63,8 @@ impl EtcdClient {
             watch: WatchClient::new(transport.clone()),
             lease: LeaseClient::new(transport.clone()),
             transport,
+            credential,
+            token,
         })
     }
 
@@ -138,16 +137,32 @@ impl EtcdClient {
     pub async fn list_leases(&mut self) -> Result<pb::LeaseLeasesResponse> {
         self.lease.list().await
     }
+
+    /// Refresh token
+    pub async fn refresh_token(&mut self) -> Result<()> {
+        if let Some((username, password)) = &self.credential {
+            let token = self.auth.get_token(username, password).await?;
+
+            *self.token.write().unwrap() = token;
+        }
+
+        Ok(())
+    }
 }
 
-async fn get_token(endpoint: Uri, name: &str, password: &str) -> Result<String> {
-    let channel = connect_to(endpoint).await?;
+async fn get_token(endpoints: &[Uri], name: &str, password: &str) -> Result<String> {
+    for ep in endpoints {
+        let channel = connect_to(ep.to_owned()).await?;
+        let transport = InterceptedService::new(channel, CredentialInterceptor::empty());
 
-    let transport = InterceptedService::new(channel, InsertTokenHeader::empty());
+        let mut auth_client = AuthClient::new(transport);
 
-    let mut auth_client = AuthClient::new(transport);
+        if let Ok(token) = auth_client.get_token(name, password).await {
+            return Ok(token);
+        }
+    }
 
-    auth_client.get_token(name, password).await
+    Err(EtcdClientError::AuthFailed)
 }
 
 async fn new_channel(endpoints: Vec<Uri>) -> Result<Channel> {
