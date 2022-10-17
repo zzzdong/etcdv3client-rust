@@ -6,7 +6,7 @@ use tokio::sync::mpsc::{channel, Sender};
 use tonic::codec::Streaming;
 
 use crate::client::Transport;
-use crate::error::{LeaseError, Result};
+use crate::error::{ErrKind, Error, Result};
 use crate::pb::{self, lease_client::LeaseClient as PbLeaseClient};
 use crate::EtcdClient;
 
@@ -122,7 +122,10 @@ impl<'a> DoLeaseKeepAlive<'a> {
         let (req_tx, req_rx) = channel::<pb::LeaseKeepAliveRequest>(MPSC_CHANNEL_SIZE);
 
         let request = pb::LeaseKeepAliveRequest::new(lease_id);
-        req_tx.send(request).await.map_err(LeaseError::from)?;
+        req_tx
+            .send(request)
+            .await
+            .map_err(|err| Error::new(ErrKind::LeaseRequestFailed, err))?;
 
         let rx = tokio_stream::wrappers::ReceiverStream::new(req_rx);
         let resp = client.lease_keep_alive(rx).await?;
@@ -173,7 +176,7 @@ impl LeaseKeepAliver {
         self.req_tx
             .send(request)
             .await
-            .map_err(LeaseError::LeaseKeepAliveRequestError)?;
+            .map_err(|err| Error::new(ErrKind::LeaseRequestFailed, err))?;
 
         Ok(())
     }

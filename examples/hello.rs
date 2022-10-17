@@ -1,17 +1,17 @@
 use std::time::Instant;
 
-use etcdv3client::{pb::RangeRequest, EtcdClient, EtcdClientError};
+use etcdv3client::{pb::RangeRequest, Error, EtcdClient};
 
 #[tokio::main]
-async fn main() -> Result<(), EtcdClientError> {
+async fn main() -> Result<(), Error> {
     let key = "hello";
     let value = "world";
     let mut origin: Option<Vec<u8>> = None;
 
     let endpoint = "http://localhost:2379";
-    let auth: Option<(String, String)> = None;
+    let cred: Option<(String, String)> = None;
 
-    let mut client = EtcdClient::new(vec![endpoint], auth).await?;
+    let mut client = EtcdClient::new(vec![endpoint], cred).await?;
 
     // use convenience api under EtcdClient.
     match client.get(key).await {
@@ -19,11 +19,13 @@ async fn main() -> Result<(), EtcdClientError> {
             println!("got orignal {} => {:?}", key, String::from_utf8_lossy(&v));
             origin = Some(v.to_vec());
         }
-        Err(EtcdClientError::KeyNotFound) => {
-            client.put(key, value).await.unwrap();
-        }
-        Err(e) => {
-            return Err(e);
+
+        Err(err) => {
+            if err.is_key_not_found() {
+                client.put(key, value).await.unwrap();
+            } else {
+                return Err(err);
+            }
         }
     }
 

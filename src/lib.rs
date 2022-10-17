@@ -1,10 +1,10 @@
 //! A etcdv3 client written in Rust-lang.
 //!
 //! ```rust,no_run
-//! use etcdv3client::{EtcdClient, EtcdClientError};
+//! use etcdv3client::{EtcdClient, Error};
 //!
 //! #[tokio::main]
-//! async fn main() -> Result<(), EtcdClientError> {
+//! async fn main() -> Result<(), Error> {
 //!     let endpoint = "http://localhost:2379";
 //!     let auth: Option<(String, String)> = None;
 //!     let mut client = EtcdClient::new(vec![endpoint], auth).await?;
@@ -15,11 +15,13 @@
 //!         Ok(v) => {
 //!             println!("got `{}` => {:?}", key, String::from_utf8_lossy(&v));
 //!         }
-//!         Err(EtcdClientError::KeyNotFound) => {
-//!             eprintln!("can not find `{}`", key);
-//!         }
-//!         Err(e) => {
-//!             eprintln!("etcd get error: `{:?}`", e);
+//!         Err(err) => {
+//!             if err.is_key_not_found() {
+//!                 eprintln!("can not find `{}`", key);
+//!             } else {
+//!                 eprintln!("etcd get failed: `{:?}`", err);
+//!             }
+//!             
 //!         }
 //!     }
 //!
@@ -39,7 +41,7 @@ mod lease;
 mod watch;
 
 pub use client::EtcdClient;
-pub use error::EtcdClientError;
+pub use error::{ErrKind, Error};
 pub use kv::KvClient;
 pub use lease::{LeaseClient, LeaseKeepAliver};
 pub use watch::{WatchClient, Watcher};

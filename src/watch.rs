@@ -3,7 +3,7 @@ use std::future::{Future, IntoFuture};
 use std::pin::Pin;
 
 use crate::client::Transport;
-use crate::error::{EtcdClientError, Result, WatchError};
+use crate::error::{ErrKind, Error, Result};
 use crate::pb::{self, watch_client::WatchClient as PbWatchClient};
 use crate::utils::build_prefix_end;
 use crate::EtcdClient;
@@ -31,9 +31,9 @@ impl WatchClient {
     /// watch
     ///
     /// ```no_run
-    /// # use etcdv3client::{EtcdClient, EtcdClientError, WatchClient};
+    /// # use etcdv3client::{EtcdClient, Error, WatchClient};
     /// # #[tokio::main]
-    /// # async fn main() -> Result<(), EtcdClientError> {
+    /// # async fn main() -> Result<(), Error> {
     /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
     /// let resp = WatchClient::with_client(&client).do_watch("hello").with_prefix().await.unwrap();
     /// # Ok(())
@@ -82,14 +82,17 @@ impl<'a> DoCreateWatch<'a> {
         };
 
         let (req_tx, req_rx) = channel::<pb::WatchRequest>(MPSC_CHANNEL_SIZE);
-        req_tx.send(create_req).await.map_err(WatchError::from)?;
+        req_tx
+            .send(create_req)
+            .await
+            .map_err(|err| Error::new(ErrKind::WatchRequestFailed, err))?;
 
         let rx = tokio_stream::wrappers::ReceiverStream::new(req_rx);
         let mut resp = client.watch(rx).await?;
 
         let watch_id = match resp.message().await? {
             Some(msg) => msg.watch_id,
-            None => return Err(EtcdClientError::from(WatchError::StartFailed)),
+            None => return Err(Error::from_kind(ErrKind::WatchStartFailed)),
         };
 
         let watcher = Watcher::new(watch_id, req_tx, resp);
@@ -226,7 +229,7 @@ impl Watcher {
         self.req_tx
             .send(request)
             .await
-            .map_err(WatchError::RequestError)?;
+            .map_err(|err| Error::new(ErrKind::WatchRequestFailed, err))?;
 
         Ok(())
     }
@@ -237,7 +240,7 @@ impl Watcher {
         self.req_tx
             .send(request)
             .await
-            .map_err(WatchError::RequestError)?;
+            .map_err(|err| Error::new(ErrKind::WatchRequestFailed, err))?;
 
         Ok(())
     }

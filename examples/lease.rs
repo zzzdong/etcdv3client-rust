@@ -2,17 +2,17 @@ use std::time::Duration;
 
 use tokio::time::sleep;
 
-use etcdv3client::{EtcdClient, EtcdClientError};
+use etcdv3client::{Error, EtcdClient};
 
 #[tokio::main]
-async fn main() -> Result<(), EtcdClientError> {
+async fn main() -> Result<(), Error> {
     let key = "hello";
     let world = "world";
 
     let endpoint = "http://localhost:2379";
-    let auth: Option<(String, String)> = None;
+    let cred: Option<(String, String)> = None;
 
-    let mut client = EtcdClient::new(vec![endpoint], auth).await?;
+    let mut client = EtcdClient::new(vec![endpoint], cred).await?;
 
     let start = std::time::Instant::now();
     let lease = client.grant_lease(3, 0).await?;

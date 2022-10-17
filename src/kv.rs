@@ -1,5 +1,5 @@
 use crate::client::Transport;
-use crate::error::{EtcdClientError, Result};
+use crate::error::{ErrKind, Error, Result};
 use crate::pb::{self, kv_client::KvClient as PbKvClient};
 use crate::utils::build_prefix_end;
 use crate::EtcdClient;
@@ -24,9 +24,9 @@ impl KvClient {
     /// Do range request
     ///
     /// ```no_run
-    /// # use etcdv3client::{EtcdClient, EtcdClientError, KvClient};
+    /// # use etcdv3client::{EtcdClient, Error, KvClient};
     /// # #[tokio::main]
-    /// # async fn main() -> Result<(), EtcdClientError> {
+    /// # async fn main() -> Result<(), Error> {
     /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
     /// let resp = KvClient::with_client(&client).do_range("hello").with_prefix().await.unwrap();
     /// # Ok(())
@@ -40,16 +40,19 @@ impl KvClient {
     #[inline]
     pub async fn get(&mut self, key: impl AsRef<[u8]>) -> Result<Vec<u8>> {
         let resp = self.do_range(key).await?;
-        let kv = resp.kvs.first().ok_or(EtcdClientError::KeyNotFound)?;
+        let kv = resp
+            .kvs
+            .first()
+            .ok_or_else(|| Error::from_kind(ErrKind::KeyNotFound))?;
         Ok(kv.value.clone())
     }
 
     /// Get string by key
     ///
     /// ```no_run
-    /// # use etcdv3client::{EtcdClient, EtcdClientError, KvClient};
+    /// # use etcdv3client::{EtcdClient, Error, KvClient};
     /// # #[tokio::main]
-    /// # async fn main() -> Result<(), EtcdClientError> {
+    /// # async fn main() -> Result<(), Error> {
     /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
     /// let resp = KvClient::with_client(&client).get("hello").await.unwrap();
     /// # Ok(())
@@ -59,7 +62,7 @@ impl KvClient {
     pub async fn get_string(&mut self, key: impl AsRef<[u8]>) -> Result<String> {
         let value = self.get(key).await?;
 
-        String::from_utf8(value).map_err(EtcdClientError::FromUtf8)
+        String::from_utf8(value).map_err(|err| Error::new(ErrKind::InvalidData, err))
     }
 
     /// Get key-value pairs with prefix
@@ -81,9 +84,9 @@ impl KvClient {
     /// Do put request
     ///
     /// ```no_run
-    /// # use etcdv3client::{EtcdClient, EtcdClientError, KvClient, pb};
+    /// # use etcdv3client::{EtcdClient, Error, KvClient, pb};
     /// # #[tokio::main]
-    /// # async fn main() -> Result<(), EtcdClientError> {
+    /// # async fn main() -> Result<(), Error> {
     /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
     /// let resp = KvClient::with_client(&client).do_put("hello", "world").with_prev_kv(true).await.unwrap();
     /// # Ok(())
@@ -100,9 +103,9 @@ impl KvClient {
     /// Do delete range request
     ///
     /// ```no_run
-    /// # use etcdv3client::{EtcdClient, EtcdClientError, KvClient, pb};
+    /// # use etcdv3client::{EtcdClient, Error, KvClient, pb};
     /// # #[tokio::main]
-    /// # async fn main() -> Result<(), EtcdClientError> {
+    /// # async fn main() -> Result<(), Error> {
     /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
     /// let resp = KvClient::with_client(&client).do_delete_range("hello").with_prefix().await.unwrap();
     /// # Ok(())

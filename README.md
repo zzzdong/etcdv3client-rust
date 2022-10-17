@@ -13,14 +13,14 @@ etcdv3client-rust
 ## Example
 
 A basic example:
-```rust,no_run
-use etcdv3client::{EtcdClient, EtcdClientError};
+```rust
+use etcdv3client::{EtcdClient, Error};
 
 #[tokio::main]
-async fn main() -> Result<(), EtcdClientError> {
+async fn main() -> Result<(), Error> {
     let endpoint = "http://localhost:2379";
-    let auth: Option<(String, String)> = None;
-    let mut client = EtcdClient::new(vec![endpoint], auth).await?;
+    let cred: Option<(String, String)> = None;
+    let mut client = EtcdClient::new(vec![endpoint], cred).await?;
 
     let key = "/hello";
     // use convenience api under EtcdClient.
@@ -28,11 +28,12 @@ async fn main() -> Result<(), EtcdClientError> {
         Ok(v) => {
             println!("got `{}` => {:?}", key, String::from_utf8_lossy(&v));
         }
-        Err(EtcdClientError::KeyNotFound) => {
-            eprintln!("can not find `{}`", key);
-        }
-        Err(e) => {
-            eprintln!("etcd get error: `{:?}`", e);
+        Err(err) => {
+            if err.is_key_not_found() {
+                 eprintln!("can not find `{}`", key);
+            } else {
+                 eprintln!("etcd get failed: `{:?}`", e);
+            }
         }
     }
 

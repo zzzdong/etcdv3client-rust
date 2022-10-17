@@ -1,6 +1,6 @@
 use std::sync::{Arc, RwLock};
 
-use crate::error::{EtcdClientError, Result};
+use crate::error::{ErrKind, Error, Result};
 use crate::interceptor::CredentialInterceptor;
 use crate::pb;
 
@@ -38,9 +38,12 @@ impl EtcdClient {
 
         // check endpoints
         for ep in &endpoints {
-            let uri: Uri = ep.as_ref().parse()?;
+            let uri: Uri = ep
+                .as_ref()
+                .parse()
+                .map_err(|err| Error::new(ErrKind::Endpoint, err))?;
             if uri.scheme().is_none() {
-                return Err(EtcdClientError::EndpointError);
+                return Err(Error::new(ErrKind::Endpoint, "endpoint scheme is empty"));
             }
             ep_uris.push(uri);
         }
@@ -157,12 +160,20 @@ async fn get_token(endpoints: &[Uri], name: &str, password: &str) -> Result<Stri
 
         let mut auth_client = AuthClient::new(transport);
 
-        if let Ok(token) = auth_client.get_token(name, password).await {
-            return Ok(token);
+        match auth_client.get_token(name, password).await {
+            Ok(token) => {
+                return Ok(token);
+            }
+            Err(err) => {
+                if err.kind() == ErrKind::AuthNotEnabled {
+                    return Ok(String::new());
+                }
+                // FIXME: when error, just let it go?
+            }
         }
     }
 
-    Err(EtcdClientError::AuthFailed)
+    Err(Error::new(ErrKind::AuthFailed, ""))
 }
 
 async fn new_channel(endpoints: Vec<Uri>) -> Result<Channel> {
@@ -173,8 +184,11 @@ async fn new_channel(endpoints: Vec<Uri>) -> Result<Channel> {
     }
 
     match eps.len() {
-        0 => Err(EtcdClientError::ErrMsg("endpoint uri empty".to_string())),
-        1 => eps[0].connect().await.map_err(EtcdClientError::from),
+        0 => Err(Error::new(ErrKind::Endpoint, "endpoint uri empty")),
+        1 => eps[0]
+            .connect()
+            .await
+            .map_err(|err| Error::new(ErrKind::ConnectFailed, err)),
         _ => Ok(Channel::balance_list(eps.into_iter())),
     }
 }
@@ -183,5 +197,5 @@ async fn connect_to(endpoint: Uri) -> Result<Channel> {
     Channel::builder(endpoint)
         .connect()
         .await
-        .map_err(EtcdClientError::from)
+        .map_err(|err| Error::new(ErrKind::ConnectFailed, err))
 }
