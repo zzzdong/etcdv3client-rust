@@ -31,10 +31,10 @@ impl WatchClient {
     /// watch
     ///
     /// ```no_run
-    /// # use etcdv3client::{EtcdClient, Error, WatchClient};
+    /// # use etcdv3client::{Client, Error, WatchClient};
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
-    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
+    /// # let client = Client::new(vec!["localhost:2379"], None).await?;
     /// let resp = WatchClient::with_client(&client).do_watch("hello").with_prefix().await.unwrap();
     /// # Ok(())
     /// # }

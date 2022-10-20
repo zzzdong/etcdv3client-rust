@@ -7,7 +7,7 @@ async fn main() -> Result<(), Error> {
     let mut client = Client::new(vec![endpoint], cred).await?;
 
     let key = "/hello";
-    // use convenience api under EtcdClient.
+    // use convenience api under Client.
     match client.get(key).await {
         Ok(v) => {
             println!("got `{}` => {:?}", key, String::from_utf8_lossy(&v));

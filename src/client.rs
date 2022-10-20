@@ -29,7 +29,7 @@ pub struct Client {
 }
 
 impl Client {
-    /// Create a new EtcdClient
+    /// Create a new Client
     pub async fn new(
         endpoints: Vec<impl AsRef<str>>,
         credential: Option<(String, String)>,

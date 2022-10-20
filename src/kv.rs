@@ -24,10 +24,10 @@ impl KvClient {
     /// Do range request
     ///
     /// ```no_run
-    /// # use etcdv3client::{EtcdClient, Error, KvClient};
+    /// # use etcdv3client::{Client, Error, KvClient};
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
-    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
+    /// # let client = Client::new(vec!["localhost:2379"], None).await?;
     /// let resp = KvClient::with_client(&client).do_range("hello").with_prefix().await.unwrap();
     /// # Ok(())
     /// # }
@@ -50,10 +50,10 @@ impl KvClient {
     /// Get string by key
     ///
     /// ```no_run
-    /// # use etcdv3client::{EtcdClient, Error, KvClient};
+    /// # use etcdv3client::{Client, Error, KvClient};
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
-    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
+    /// # let client = Client::new(vec!["localhost:2379"], None).await?;
     /// let resp = KvClient::with_client(&client).get("hello").await.unwrap();
     /// # Ok(())
     /// # }
@@ -84,10 +84,10 @@ impl KvClient {
     /// Do put request
     ///
     /// ```no_run
-    /// # use etcdv3client::{EtcdClient, Error, KvClient, pb};
+    /// # use etcdv3client::{Client, Error, KvClient, pb};
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
-    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
+    /// # let client = Client::new(vec!["localhost:2379"], None).await?;
     /// let resp = KvClient::with_client(&client).do_put("hello", "world").with_prev_kv(true).await.unwrap();
     /// # Ok(())
     /// # }
@@ -103,10 +103,10 @@ impl KvClient {
     /// Do delete range request
     ///
     /// ```no_run
-    /// # use etcdv3client::{EtcdClient, Error, KvClient, pb};
+    /// # use etcdv3client::{Client, Error, KvClient, pb};
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
-    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
+    /// # let client = Client::new(vec!["localhost:2379"], None).await?;
     /// let resp = KvClient::with_client(&client).do_delete_range("hello").with_prefix().await.unwrap();
     /// # Ok(())
     /// # }
