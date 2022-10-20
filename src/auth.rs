@@ -1,7 +1,7 @@
 use crate::client::Transport;
 use crate::error::Result;
 use crate::pb::{self, auth_client::AuthClient as PbAuthClient};
-use crate::EtcdClient;
+use crate::Client;
 
 use helper::*;
 
@@ -16,7 +16,7 @@ impl AuthClient {
         AuthClient { inner }
     }
 
-    pub fn with_client(client: &EtcdClient) -> Self {
+    pub fn with_client(client: &Client) -> Self {
         Self::new(client.transport.clone())
     }
 

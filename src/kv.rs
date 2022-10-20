@@ -2,7 +2,7 @@ use crate::client::Transport;
 use crate::error::{ErrKind, Error, Result};
 use crate::pb::{self, kv_client::KvClient as PbKvClient};
 use crate::utils::build_prefix_end;
-use crate::EtcdClient;
+use crate::Client;
 
 use helper::*;
 
@@ -17,7 +17,7 @@ impl KvClient {
         KvClient { inner }
     }
 
-    pub fn with_client(client: &EtcdClient) -> Self {
+    pub fn with_client(client: &Client) -> Self {
         Self::new(client.transport.clone())
     }
 

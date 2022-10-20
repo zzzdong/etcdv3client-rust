@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use etcdv3client::{pb::RangeRequest, Error, EtcdClient};
+use etcdv3client::{pb::RangeRequest, Error, Client};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -11,7 +11,7 @@ async fn main() -> Result<(), Error> {
     let endpoint = "http://localhost:2379";
     let cred: Option<(String, String)> = None;
 
-    let mut client = EtcdClient::new(vec![endpoint], cred).await?;
+    let mut client = Client::new(vec![endpoint], cred).await?;
 
     // use convenience api under EtcdClient.
     match client.get(key).await {

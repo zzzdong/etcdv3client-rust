@@ -16,7 +16,7 @@ use tonic::transport::{channel::Channel, Endpoint};
 pub(crate) type Transport =
     InterceptedService<tonic::transport::channel::Channel, CredentialInterceptor>;
 
-pub struct EtcdClient {
+pub struct Client {
     pub kv: KvClient,
     pub auth: AuthClient,
     pub watch: WatchClient,
@@ -28,7 +28,7 @@ pub struct EtcdClient {
     token: Arc<RwLock<String>>,
 }
 
-impl EtcdClient {
+impl Client {
     /// Create a new EtcdClient
     pub async fn new(
         endpoints: Vec<impl AsRef<str>>,
@@ -60,7 +60,7 @@ impl EtcdClient {
 
         let transport = InterceptedService::new(channel, CredentialInterceptor::new(token.clone()));
 
-        Ok(EtcdClient {
+        Ok(Client {
             auth: AuthClient::new(transport.clone()),
             kv: KvClient::new(transport.clone()),
             watch: WatchClient::new(transport.clone()),

@@ -8,7 +8,7 @@ use tonic::codec::Streaming;
 use crate::client::Transport;
 use crate::error::{ErrKind, Error, Result};
 use crate::pb::{self, lease_client::LeaseClient as PbLeaseClient};
-use crate::EtcdClient;
+use crate::Client;
 
 use helper::*;
 
@@ -25,7 +25,7 @@ impl LeaseClient {
         LeaseClient { inner }
     }
 
-    pub fn with_client(client: &EtcdClient) -> Self {
+    pub fn with_client(client: &Client) -> Self {
         Self::new(client.transport.clone())
     }
 

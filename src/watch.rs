@@ -6,7 +6,7 @@ use crate::client::Transport;
 use crate::error::{ErrKind, Error, Result};
 use crate::pb::{self, watch_client::WatchClient as PbWatchClient};
 use crate::utils::build_prefix_end;
-use crate::EtcdClient;
+use crate::Client;
 
 use tokio::sync::mpsc::{channel, Sender};
 use tonic::codec::Streaming;
@@ -24,7 +24,7 @@ impl WatchClient {
         WatchClient { inner }
     }
 
-    pub fn with_client(client: &EtcdClient) -> Self {
+    pub fn with_client(client: &Client) -> Self {
         Self::new(client.transport.clone())
     }
 

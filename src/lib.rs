@@ -40,7 +40,7 @@ mod kv;
 mod lease;
 mod watch;
 
-pub use client::EtcdClient;
+pub use client::Client;
 pub use error::{ErrKind, Error};
 pub use kv::KvClient;
 pub use lease::{LeaseClient, LeaseKeepAliver};
