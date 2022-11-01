@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use etcdv3client::{pb::RangeRequest, Error, Client};
+use etcdv3client::{pb::RangeRequest, Client, Error};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {

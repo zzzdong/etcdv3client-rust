@@ -1,8 +1,8 @@
 [package]
 name = "etcdv3client"
-version = "0.3.0-beta"
+version = "0.3.0-beta.1"
 authors = ["zzzdong <kuwater@163.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/zzzdong/etcdv3client-rust"

@@ -1,4 +1,4 @@
-use etcdv3client::{Error, Client};
+use etcdv3client::{Client, Error};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
