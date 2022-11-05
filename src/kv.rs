@@ -6,6 +6,7 @@ use crate::Client;
 
 use helper::*;
 
+#[derive(Debug, Clone)]
 pub struct KvClient {
     inner: PbKvClient<Transport>,
 }
@@ -143,11 +144,11 @@ impl pb::RangeRequest {
     }
 }
 
-impl<'a> DoRangeRequest<'a> {
-    pub fn new(key: impl AsRef<[u8]>, client: &'a mut KvClient) -> Self {
+impl DoRangeRequest {
+    pub fn new(key: impl AsRef<[u8]>, client: &KvClient) -> Self {
         DoRangeRequest {
             request: pb::RangeRequest::new(key),
-            client,
+            client: client.clone(),
         }
     }
 
@@ -168,11 +169,11 @@ impl pb::PutRequest {
     }
 }
 
-impl<'a> DoPutRequest<'a> {
-    pub fn new(key: impl AsRef<[u8]>, value: impl AsRef<[u8]>, client: &'a mut KvClient) -> Self {
+impl DoPutRequest {
+    pub fn new(key: impl AsRef<[u8]>, value: impl AsRef<[u8]>, client: &KvClient) -> Self {
         DoPutRequest {
             request: pb::PutRequest::new(key, value),
-            client,
+            client: client.clone(),
         }
     }
 }
@@ -186,11 +187,11 @@ impl pb::DeleteRangeRequest {
     }
 }
 
-impl<'a> DoDeleteRangeRequest<'a> {
-    pub fn new(key: impl AsRef<[u8]>, client: &'a mut KvClient) -> Self {
+impl DoDeleteRangeRequest {
+    pub fn new(key: impl AsRef<[u8]>, client: &KvClient) -> Self {
         DoDeleteRangeRequest {
             request: pb::DeleteRangeRequest::new(key),
-            client,
+            client: client.clone(),
         }
     }
 
@@ -296,13 +297,13 @@ impl From<pb::TxnRequest> for pb::RequestOp {
     }
 }
 
-impl<'a> DoTxnRequest<'a> {
-    pub fn new(client: &'a mut KvClient) -> Self {
+impl DoTxnRequest {
+    pub fn new(client: &KvClient) -> Self {
         DoTxnRequest {
             request: pb::TxnRequest {
                 ..Default::default()
             },
-            client,
+            client: client.clone(),
         }
     }
 
@@ -328,11 +329,11 @@ impl pb::CompactionRequest {
     }
 }
 
-impl<'a> DoCompactionRequest<'a> {
-    pub fn new(revision: i64, physical: bool, client: &'a mut KvClient) -> Self {
+impl DoCompactionRequest {
+    pub fn new(revision: i64, physical: bool, client: &KvClient) -> Self {
         DoCompactionRequest {
             request: pb::CompactionRequest::new(revision, physical),
-            client,
+            client: client.clone(),
         }
     }
 }

@@ -110,81 +110,94 @@ impl AuthClient {
             .into_inner())
     }
 }
-pub struct DoAuthEnableRequest<'a> {
+#[derive(Debug, Clone)]
+pub struct DoAuthEnableRequest {
     pub request: pb::AuthEnableRequest,
-    pub(crate) client: &'a mut AuthClient,
+    pub(crate) client: AuthClient,
 }
-impl<'a> DoAuthEnableRequest<'a> {
-    pub fn from_client(client: &'a mut AuthClient) -> Self {
+impl DoAuthEnableRequest {
+    pub fn from_client(client: &AuthClient) -> Self {
         DoAuthEnableRequest {
             request: Default::default(),
-            client,
+            client: client.clone(),
         }
     }
 }
-impl<'a> std::future::IntoFuture for DoAuthEnableRequest<'a> {
+impl std::future::IntoFuture for DoAuthEnableRequest {
     type Output = Result<pb::AuthEnableResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthEnableResponse>> + 'a>,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthEnableResponse>>>,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoAuthEnableRequest { request, client } = self;
+        let DoAuthEnableRequest {
+            request,
+            mut client,
+        } = self;
         Box::pin(async move { client.auth_enable(request).await })
     }
 }
-pub struct DoAuthDisableRequest<'a> {
+#[derive(Debug, Clone)]
+pub struct DoAuthDisableRequest {
     pub request: pb::AuthDisableRequest,
-    pub(crate) client: &'a mut AuthClient,
+    pub(crate) client: AuthClient,
 }
-impl<'a> DoAuthDisableRequest<'a> {
-    pub fn from_client(client: &'a mut AuthClient) -> Self {
+impl DoAuthDisableRequest {
+    pub fn from_client(client: &AuthClient) -> Self {
         DoAuthDisableRequest {
             request: Default::default(),
-            client,
+            client: client.clone(),
         }
     }
 }
-impl<'a> std::future::IntoFuture for DoAuthDisableRequest<'a> {
+impl std::future::IntoFuture for DoAuthDisableRequest {
     type Output = Result<pb::AuthDisableResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthDisableResponse>> + 'a>,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthDisableResponse>>>,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoAuthDisableRequest { request, client } = self;
+        let DoAuthDisableRequest {
+            request,
+            mut client,
+        } = self;
         Box::pin(async move { client.auth_disable(request).await })
     }
 }
-pub struct DoAuthStatusRequest<'a> {
+#[derive(Debug, Clone)]
+pub struct DoAuthStatusRequest {
     pub request: pb::AuthStatusRequest,
-    pub(crate) client: &'a mut AuthClient,
+    pub(crate) client: AuthClient,
 }
-impl<'a> DoAuthStatusRequest<'a> {
-    pub fn from_client(client: &'a mut AuthClient) -> Self {
+impl DoAuthStatusRequest {
+    pub fn from_client(client: &AuthClient) -> Self {
         DoAuthStatusRequest {
             request: Default::default(),
-            client,
+            client: client.clone(),
         }
     }
 }
-impl<'a> std::future::IntoFuture for DoAuthStatusRequest<'a> {
+impl std::future::IntoFuture for DoAuthStatusRequest {
     type Output = Result<pb::AuthStatusResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthStatusResponse>> + 'a>,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthStatusResponse>>>,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoAuthStatusRequest { request, client } = self;
+        let DoAuthStatusRequest {
+            request,
+            mut client,
+        } = self;
         Box::pin(async move { client.auth_status(request).await })
     }
 }
-pub struct DoAuthenticateRequest<'a> {
+#[derive(Debug, Clone)]
+pub struct DoAuthenticateRequest {
     pub request: pb::AuthenticateRequest,
-    pub(crate) client: &'a mut AuthClient,
+    pub(crate) client: AuthClient,
 }
-impl<'a> DoAuthenticateRequest<'a> {
-    pub fn from_client(client: &'a mut AuthClient) -> Self {
+impl DoAuthenticateRequest {
+    pub fn from_client(client: &AuthClient) -> Self {
         DoAuthenticateRequest {
             request: Default::default(),
-            client,
+            client: client.clone(),
         }
     }
     pub fn with_name(mut self, name: String) -> Self {
@@ -196,25 +209,29 @@ impl<'a> DoAuthenticateRequest<'a> {
         self
     }
 }
-impl<'a> std::future::IntoFuture for DoAuthenticateRequest<'a> {
+impl std::future::IntoFuture for DoAuthenticateRequest {
     type Output = Result<pb::AuthenticateResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthenticateResponse>> + 'a>,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthenticateResponse>>>,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoAuthenticateRequest { request, client } = self;
+        let DoAuthenticateRequest {
+            request,
+            mut client,
+        } = self;
         Box::pin(async move { client.authenticate(request).await })
     }
 }
-pub struct DoAuthUserAddRequest<'a> {
+#[derive(Debug, Clone)]
+pub struct DoAuthUserAddRequest {
     pub request: pb::AuthUserAddRequest,
-    pub(crate) client: &'a mut AuthClient,
+    pub(crate) client: AuthClient,
 }
-impl<'a> DoAuthUserAddRequest<'a> {
-    pub fn from_client(client: &'a mut AuthClient) -> Self {
+impl DoAuthUserAddRequest {
+    pub fn from_client(client: &AuthClient) -> Self {
         DoAuthUserAddRequest {
             request: Default::default(),
-            client,
+            client: client.clone(),
         }
     }
     pub fn with_name(mut self, name: String) -> Self {
@@ -230,25 +247,29 @@ impl<'a> DoAuthUserAddRequest<'a> {
         self
     }
 }
-impl<'a> std::future::IntoFuture for DoAuthUserAddRequest<'a> {
+impl std::future::IntoFuture for DoAuthUserAddRequest {
     type Output = Result<pb::AuthUserAddResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthUserAddResponse>> + 'a>,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthUserAddResponse>>>,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoAuthUserAddRequest { request, client } = self;
+        let DoAuthUserAddRequest {
+            request,
+            mut client,
+        } = self;
         Box::pin(async move { client.user_add(request).await })
     }
 }
-pub struct DoAuthUserGetRequest<'a> {
+#[derive(Debug, Clone)]
+pub struct DoAuthUserGetRequest {
     pub request: pb::AuthUserGetRequest,
-    pub(crate) client: &'a mut AuthClient,
+    pub(crate) client: AuthClient,
 }
-impl<'a> DoAuthUserGetRequest<'a> {
-    pub fn from_client(client: &'a mut AuthClient) -> Self {
+impl DoAuthUserGetRequest {
+    pub fn from_client(client: &AuthClient) -> Self {
         DoAuthUserGetRequest {
             request: Default::default(),
-            client,
+            client: client.clone(),
         }
     }
     pub fn with_name(mut self, name: String) -> Self {
@@ -256,47 +277,55 @@ impl<'a> DoAuthUserGetRequest<'a> {
         self
     }
 }
-impl<'a> std::future::IntoFuture for DoAuthUserGetRequest<'a> {
+impl std::future::IntoFuture for DoAuthUserGetRequest {
     type Output = Result<pb::AuthUserGetResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthUserGetResponse>> + 'a>,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthUserGetResponse>>>,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoAuthUserGetRequest { request, client } = self;
+        let DoAuthUserGetRequest {
+            request,
+            mut client,
+        } = self;
         Box::pin(async move { client.user_get(request).await })
     }
 }
-pub struct DoAuthUserListRequest<'a> {
+#[derive(Debug, Clone)]
+pub struct DoAuthUserListRequest {
     pub request: pb::AuthUserListRequest,
-    pub(crate) client: &'a mut AuthClient,
+    pub(crate) client: AuthClient,
 }
-impl<'a> DoAuthUserListRequest<'a> {
-    pub fn from_client(client: &'a mut AuthClient) -> Self {
+impl DoAuthUserListRequest {
+    pub fn from_client(client: &AuthClient) -> Self {
         DoAuthUserListRequest {
             request: Default::default(),
-            client,
+            client: client.clone(),
         }
     }
 }
-impl<'a> std::future::IntoFuture for DoAuthUserListRequest<'a> {
+impl std::future::IntoFuture for DoAuthUserListRequest {
     type Output = Result<pb::AuthUserListResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthUserListResponse>> + 'a>,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthUserListResponse>>>,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoAuthUserListRequest { request, client } = self;
+        let DoAuthUserListRequest {
+            request,
+            mut client,
+        } = self;
         Box::pin(async move { client.user_list(request).await })
     }
 }
-pub struct DoAuthUserDeleteRequest<'a> {
+#[derive(Debug, Clone)]
+pub struct DoAuthUserDeleteRequest {
     pub request: pb::AuthUserDeleteRequest,
-    pub(crate) client: &'a mut AuthClient,
+    pub(crate) client: AuthClient,
 }
-impl<'a> DoAuthUserDeleteRequest<'a> {
-    pub fn from_client(client: &'a mut AuthClient) -> Self {
+impl DoAuthUserDeleteRequest {
+    pub fn from_client(client: &AuthClient) -> Self {
         DoAuthUserDeleteRequest {
             request: Default::default(),
-            client,
+            client: client.clone(),
         }
     }
     pub fn with_name(mut self, name: String) -> Self {
@@ -304,27 +333,29 @@ impl<'a> DoAuthUserDeleteRequest<'a> {
         self
     }
 }
-impl<'a> std::future::IntoFuture for DoAuthUserDeleteRequest<'a> {
+impl std::future::IntoFuture for DoAuthUserDeleteRequest {
     type Output = Result<pb::AuthUserDeleteResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<
-            dyn std::future::Future<Output = crate::error::Result<pb::AuthUserDeleteResponse>> + 'a,
-        >,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthUserDeleteResponse>>>,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoAuthUserDeleteRequest { request, client } = self;
+        let DoAuthUserDeleteRequest {
+            request,
+            mut client,
+        } = self;
         Box::pin(async move { client.user_delete(request).await })
     }
 }
-pub struct DoAuthUserChangePasswordRequest<'a> {
+#[derive(Debug, Clone)]
+pub struct DoAuthUserChangePasswordRequest {
     pub request: pb::AuthUserChangePasswordRequest,
-    pub(crate) client: &'a mut AuthClient,
+    pub(crate) client: AuthClient,
 }
-impl<'a> DoAuthUserChangePasswordRequest<'a> {
-    pub fn from_client(client: &'a mut AuthClient) -> Self {
+impl DoAuthUserChangePasswordRequest {
+    pub fn from_client(client: &AuthClient) -> Self {
         DoAuthUserChangePasswordRequest {
             request: Default::default(),
-            client,
+            client: client.clone(),
         }
     }
     pub fn with_name(mut self, name: String) -> Self {
@@ -340,29 +371,33 @@ impl<'a> DoAuthUserChangePasswordRequest<'a> {
         self
     }
 }
-impl<'a> std::future::IntoFuture for DoAuthUserChangePasswordRequest<'a> {
+impl std::future::IntoFuture for DoAuthUserChangePasswordRequest {
     type Output = Result<pb::AuthUserChangePasswordResponse>;
     type IntoFuture = std::pin::Pin<
         Box<
             dyn std::future::Future<
-                    Output = crate::error::Result<pb::AuthUserChangePasswordResponse>,
-                > + 'a,
+                Output = crate::error::Result<pb::AuthUserChangePasswordResponse>,
+            >,
         >,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoAuthUserChangePasswordRequest { request, client } = self;
+        let DoAuthUserChangePasswordRequest {
+            request,
+            mut client,
+        } = self;
         Box::pin(async move { client.user_change_password(request).await })
     }
 }
-pub struct DoAuthUserGrantRoleRequest<'a> {
+#[derive(Debug, Clone)]
+pub struct DoAuthUserGrantRoleRequest {
     pub request: pb::AuthUserGrantRoleRequest,
-    pub(crate) client: &'a mut AuthClient,
+    pub(crate) client: AuthClient,
 }
-impl<'a> DoAuthUserGrantRoleRequest<'a> {
-    pub fn from_client(client: &'a mut AuthClient) -> Self {
+impl DoAuthUserGrantRoleRequest {
+    pub fn from_client(client: &AuthClient) -> Self {
         DoAuthUserGrantRoleRequest {
             request: Default::default(),
-            client,
+            client: client.clone(),
         }
     }
     pub fn with_user(mut self, user: String) -> Self {
@@ -374,28 +409,29 @@ impl<'a> DoAuthUserGrantRoleRequest<'a> {
         self
     }
 }
-impl<'a> std::future::IntoFuture for DoAuthUserGrantRoleRequest<'a> {
+impl std::future::IntoFuture for DoAuthUserGrantRoleRequest {
     type Output = Result<pb::AuthUserGrantRoleResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<
-            dyn std::future::Future<Output = crate::error::Result<pb::AuthUserGrantRoleResponse>>
-                + 'a,
-        >,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthUserGrantRoleResponse>>>,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoAuthUserGrantRoleRequest { request, client } = self;
+        let DoAuthUserGrantRoleRequest {
+            request,
+            mut client,
+        } = self;
         Box::pin(async move { client.user_grant_role(request).await })
     }
 }
-pub struct DoAuthUserRevokeRoleRequest<'a> {
+#[derive(Debug, Clone)]
+pub struct DoAuthUserRevokeRoleRequest {
     pub request: pb::AuthUserRevokeRoleRequest,
-    pub(crate) client: &'a mut AuthClient,
+    pub(crate) client: AuthClient,
 }
-impl<'a> DoAuthUserRevokeRoleRequest<'a> {
-    pub fn from_client(client: &'a mut AuthClient) -> Self {
+impl DoAuthUserRevokeRoleRequest {
+    pub fn from_client(client: &AuthClient) -> Self {
         DoAuthUserRevokeRoleRequest {
             request: Default::default(),
-            client,
+            client: client.clone(),
         }
     }
     pub fn with_name(mut self, name: String) -> Self {
@@ -407,28 +443,29 @@ impl<'a> DoAuthUserRevokeRoleRequest<'a> {
         self
     }
 }
-impl<'a> std::future::IntoFuture for DoAuthUserRevokeRoleRequest<'a> {
+impl std::future::IntoFuture for DoAuthUserRevokeRoleRequest {
     type Output = Result<pb::AuthUserRevokeRoleResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<
-            dyn std::future::Future<Output = crate::error::Result<pb::AuthUserRevokeRoleResponse>>
-                + 'a,
-        >,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthUserRevokeRoleResponse>>>,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoAuthUserRevokeRoleRequest { request, client } = self;
+        let DoAuthUserRevokeRoleRequest {
+            request,
+            mut client,
+        } = self;
         Box::pin(async move { client.user_revoke_role(request).await })
     }
 }
-pub struct DoAuthRoleAddRequest<'a> {
+#[derive(Debug, Clone)]
+pub struct DoAuthRoleAddRequest {
     pub request: pb::AuthRoleAddRequest,
-    pub(crate) client: &'a mut AuthClient,
+    pub(crate) client: AuthClient,
 }
-impl<'a> DoAuthRoleAddRequest<'a> {
-    pub fn from_client(client: &'a mut AuthClient) -> Self {
+impl DoAuthRoleAddRequest {
+    pub fn from_client(client: &AuthClient) -> Self {
         DoAuthRoleAddRequest {
             request: Default::default(),
-            client,
+            client: client.clone(),
         }
     }
     pub fn with_name(mut self, name: String) -> Self {
@@ -436,25 +473,29 @@ impl<'a> DoAuthRoleAddRequest<'a> {
         self
     }
 }
-impl<'a> std::future::IntoFuture for DoAuthRoleAddRequest<'a> {
+impl std::future::IntoFuture for DoAuthRoleAddRequest {
     type Output = Result<pb::AuthRoleAddResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleAddResponse>> + 'a>,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleAddResponse>>>,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoAuthRoleAddRequest { request, client } = self;
+        let DoAuthRoleAddRequest {
+            request,
+            mut client,
+        } = self;
         Box::pin(async move { client.role_add(request).await })
     }
 }
-pub struct DoAuthRoleGetRequest<'a> {
+#[derive(Debug, Clone)]
+pub struct DoAuthRoleGetRequest {
     pub request: pb::AuthRoleGetRequest,
-    pub(crate) client: &'a mut AuthClient,
+    pub(crate) client: AuthClient,
 }
-impl<'a> DoAuthRoleGetRequest<'a> {
-    pub fn from_client(client: &'a mut AuthClient) -> Self {
+impl DoAuthRoleGetRequest {
+    pub fn from_client(client: &AuthClient) -> Self {
         DoAuthRoleGetRequest {
             request: Default::default(),
-            client,
+            client: client.clone(),
         }
     }
     pub fn with_role(mut self, role: String) -> Self {
@@ -462,47 +503,55 @@ impl<'a> DoAuthRoleGetRequest<'a> {
         self
     }
 }
-impl<'a> std::future::IntoFuture for DoAuthRoleGetRequest<'a> {
+impl std::future::IntoFuture for DoAuthRoleGetRequest {
     type Output = Result<pb::AuthRoleGetResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleGetResponse>> + 'a>,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleGetResponse>>>,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoAuthRoleGetRequest { request, client } = self;
+        let DoAuthRoleGetRequest {
+            request,
+            mut client,
+        } = self;
         Box::pin(async move { client.role_get(request).await })
     }
 }
-pub struct DoAuthRoleListRequest<'a> {
+#[derive(Debug, Clone)]
+pub struct DoAuthRoleListRequest {
     pub request: pb::AuthRoleListRequest,
-    pub(crate) client: &'a mut AuthClient,
+    pub(crate) client: AuthClient,
 }
-impl<'a> DoAuthRoleListRequest<'a> {
-    pub fn from_client(client: &'a mut AuthClient) -> Self {
+impl DoAuthRoleListRequest {
+    pub fn from_client(client: &AuthClient) -> Self {
         DoAuthRoleListRequest {
             request: Default::default(),
-            client,
+            client: client.clone(),
         }
     }
 }
-impl<'a> std::future::IntoFuture for DoAuthRoleListRequest<'a> {
+impl std::future::IntoFuture for DoAuthRoleListRequest {
     type Output = Result<pb::AuthRoleListResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleListResponse>> + 'a>,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleListResponse>>>,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoAuthRoleListRequest { request, client } = self;
+        let DoAuthRoleListRequest {
+            request,
+            mut client,
+        } = self;
         Box::pin(async move { client.role_list(request).await })
     }
 }
-pub struct DoAuthRoleDeleteRequest<'a> {
+#[derive(Debug, Clone)]
+pub struct DoAuthRoleDeleteRequest {
     pub request: pb::AuthRoleDeleteRequest,
-    pub(crate) client: &'a mut AuthClient,
+    pub(crate) client: AuthClient,
 }
-impl<'a> DoAuthRoleDeleteRequest<'a> {
-    pub fn from_client(client: &'a mut AuthClient) -> Self {
+impl DoAuthRoleDeleteRequest {
+    pub fn from_client(client: &AuthClient) -> Self {
         DoAuthRoleDeleteRequest {
             request: Default::default(),
-            client,
+            client: client.clone(),
         }
     }
     pub fn with_role(mut self, role: String) -> Self {
@@ -510,27 +559,29 @@ impl<'a> DoAuthRoleDeleteRequest<'a> {
         self
     }
 }
-impl<'a> std::future::IntoFuture for DoAuthRoleDeleteRequest<'a> {
+impl std::future::IntoFuture for DoAuthRoleDeleteRequest {
     type Output = Result<pb::AuthRoleDeleteResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<
-            dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleDeleteResponse>> + 'a,
-        >,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleDeleteResponse>>>,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoAuthRoleDeleteRequest { request, client } = self;
+        let DoAuthRoleDeleteRequest {
+            request,
+            mut client,
+        } = self;
         Box::pin(async move { client.role_delete(request).await })
     }
 }
-pub struct DoAuthRoleGrantPermissionRequest<'a> {
+#[derive(Debug, Clone)]
+pub struct DoAuthRoleGrantPermissionRequest {
     pub request: pb::AuthRoleGrantPermissionRequest,
-    pub(crate) client: &'a mut AuthClient,
+    pub(crate) client: AuthClient,
 }
-impl<'a> DoAuthRoleGrantPermissionRequest<'a> {
-    pub fn from_client(client: &'a mut AuthClient) -> Self {
+impl DoAuthRoleGrantPermissionRequest {
+    pub fn from_client(client: &AuthClient) -> Self {
         DoAuthRoleGrantPermissionRequest {
             request: Default::default(),
-            client,
+            client: client.clone(),
         }
     }
     pub fn with_name(mut self, name: String) -> Self {
@@ -538,29 +589,33 @@ impl<'a> DoAuthRoleGrantPermissionRequest<'a> {
         self
     }
 }
-impl<'a> std::future::IntoFuture for DoAuthRoleGrantPermissionRequest<'a> {
+impl std::future::IntoFuture for DoAuthRoleGrantPermissionRequest {
     type Output = Result<pb::AuthRoleGrantPermissionResponse>;
     type IntoFuture = std::pin::Pin<
         Box<
             dyn std::future::Future<
-                    Output = crate::error::Result<pb::AuthRoleGrantPermissionResponse>,
-                > + 'a,
+                Output = crate::error::Result<pb::AuthRoleGrantPermissionResponse>,
+            >,
         >,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoAuthRoleGrantPermissionRequest { request, client } = self;
+        let DoAuthRoleGrantPermissionRequest {
+            request,
+            mut client,
+        } = self;
         Box::pin(async move { client.role_grant_permission(request).await })
     }
 }
-pub struct DoAuthRoleRevokePermissionRequest<'a> {
+#[derive(Debug, Clone)]
+pub struct DoAuthRoleRevokePermissionRequest {
     pub request: pb::AuthRoleRevokePermissionRequest,
-    pub(crate) client: &'a mut AuthClient,
+    pub(crate) client: AuthClient,
 }
-impl<'a> DoAuthRoleRevokePermissionRequest<'a> {
-    pub fn from_client(client: &'a mut AuthClient) -> Self {
+impl DoAuthRoleRevokePermissionRequest {
+    pub fn from_client(client: &AuthClient) -> Self {
         DoAuthRoleRevokePermissionRequest {
             request: Default::default(),
-            client,
+            client: client.clone(),
         }
     }
     pub fn with_role(mut self, role: String) -> Self {
@@ -576,17 +631,20 @@ impl<'a> DoAuthRoleRevokePermissionRequest<'a> {
         self
     }
 }
-impl<'a> std::future::IntoFuture for DoAuthRoleRevokePermissionRequest<'a> {
+impl std::future::IntoFuture for DoAuthRoleRevokePermissionRequest {
     type Output = Result<pb::AuthRoleRevokePermissionResponse>;
     type IntoFuture = std::pin::Pin<
         Box<
             dyn std::future::Future<
-                    Output = crate::error::Result<pb::AuthRoleRevokePermissionResponse>,
-                > + 'a,
+                Output = crate::error::Result<pb::AuthRoleRevokePermissionResponse>,
+            >,
         >,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoAuthRoleRevokePermissionRequest { request, client } = self;
+        let DoAuthRoleRevokePermissionRequest {
+            request,
+            mut client,
+        } = self;
         Box::pin(async move { client.role_revoke_permission(request).await })
     }
 }

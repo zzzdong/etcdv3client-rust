@@ -13,6 +13,7 @@ use tonic::codec::Streaming;
 
 const MPSC_CHANNEL_SIZE: usize = 1;
 
+#[derive(Debug, Clone)]
 pub struct WatchClient {
     inner: PbWatchClient<Transport>,
 }
@@ -39,7 +40,7 @@ impl WatchClient {
     /// # Ok(())
     /// # }
     pub fn do_watch(&mut self, key: impl AsRef<[u8]>) -> DoCreateWatch {
-        DoCreateWatch::new(key, self)
+        DoCreateWatch::new(key, self.clone())
     }
 
     pub async fn watch(
@@ -60,13 +61,13 @@ impl WatchClient {
     }
 }
 
-pub struct DoCreateWatch<'a> {
+pub struct DoCreateWatch {
     pub request: pb::WatchCreateRequest,
-    client: &'a mut WatchClient,
+    client: WatchClient,
 }
 
-impl<'a> DoCreateWatch<'a> {
-    pub fn new(key: impl AsRef<[u8]>, client: &'a mut WatchClient) -> Self {
+impl DoCreateWatch {
+    pub fn new(key: impl AsRef<[u8]>, client: WatchClient) -> Self {
         DoCreateWatch {
             request: pb::WatchCreateRequest::new(key),
             client,
@@ -74,7 +75,10 @@ impl<'a> DoCreateWatch<'a> {
     }
 
     async fn send(self) -> Result<Watcher> {
-        let DoCreateWatch { request, client } = self;
+        let DoCreateWatch {
+            request,
+            mut client,
+        } = self;
 
         let create_watch = pb::watch_request::RequestUnion::CreateRequest(request);
         let create_req = pb::WatchRequest {
@@ -119,7 +123,7 @@ impl<'a> DoCreateWatch<'a> {
     }
 }
 
-impl<'a> fmt::Debug for DoCreateWatch<'a> {
+impl fmt::Debug for DoCreateWatch {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DoCreateWatch")
             .field("request", &self.request)
@@ -127,9 +131,9 @@ impl<'a> fmt::Debug for DoCreateWatch<'a> {
     }
 }
 
-impl<'a> IntoFuture for DoCreateWatch<'a> {
+impl IntoFuture for DoCreateWatch {
     type Output = Result<Watcher>;
-    type IntoFuture = Pin<Box<dyn Future<Output = Result<Watcher>> + 'a>>;
+    type IntoFuture = Pin<Box<dyn Future<Output = Result<Watcher>>>>;
 
     fn into_future(self) -> Self::IntoFuture {
         Box::pin(self.send())

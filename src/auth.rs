@@ -5,6 +5,7 @@ use crate::Client;
 
 use helper::*;
 
+#[derive(Debug, Clone)]
 pub struct AuthClient {
     inner: PbAuthClient<Transport>,
 }
@@ -79,20 +80,20 @@ impl AuthClient {
     }
 }
 
-impl<'a> DoAuthEnableRequest<'a> {
-    pub fn new(client: &'a mut AuthClient) -> Self {
+impl DoAuthEnableRequest {
+    pub fn new(client: &AuthClient) -> Self {
         DoAuthEnableRequest {
             request: Default::default(),
-            client,
+            client: client.clone(),
         }
     }
 }
 
-impl<'a> DoAuthDisableRequest<'a> {
-    pub fn new(client: &'a mut AuthClient) -> Self {
+impl DoAuthDisableRequest {
+    pub fn new(client: &AuthClient) -> Self {
         DoAuthDisableRequest {
             request: Default::default(),
-            client,
+            client: client.clone(),
         }
     }
 }
@@ -106,15 +107,11 @@ impl pb::AuthenticateRequest {
     }
 }
 
-impl<'a> DoAuthenticateRequest<'a> {
-    pub fn new(
-        name: impl AsRef<str>,
-        password: impl AsRef<str>,
-        client: &'a mut AuthClient,
-    ) -> Self {
+impl DoAuthenticateRequest {
+    pub fn new(name: impl AsRef<str>, password: impl AsRef<str>, client: &AuthClient) -> Self {
         DoAuthenticateRequest {
             request: pb::AuthenticateRequest::new(name, password),
-            client,
+            client: client.clone(),
         }
     }
 }
@@ -138,16 +135,16 @@ impl pb::AuthUserAddRequest {
     }
 }
 
-impl<'a> DoAuthUserAddRequest<'a> {
+impl DoAuthUserAddRequest {
     pub fn new(
         name: impl AsRef<str>,
         password: impl AsRef<str>,
         hashed_password: impl AsRef<str>,
-        client: &'a mut AuthClient,
+        client: &AuthClient,
     ) -> Self {
         DoAuthUserAddRequest {
             request: pb::AuthUserAddRequest::new(name, password, hashed_password),
-            client,
+            client: client.clone(),
         }
     }
 
@@ -165,11 +162,11 @@ impl pb::AuthUserGetRequest {
     }
 }
 
-impl<'a> DoAuthUserGetRequest<'a> {
-    pub fn new(name: impl AsRef<str>, client: &'a mut AuthClient) -> Self {
+impl DoAuthUserGetRequest {
+    pub fn new(name: impl AsRef<str>, client: &AuthClient) -> Self {
         DoAuthUserGetRequest {
             request: pb::AuthUserGetRequest::new(name),
-            client,
+            client: client.clone(),
         }
     }
 }
