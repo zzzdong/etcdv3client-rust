@@ -21,16 +21,15 @@ impl KvClient {
         Ok(self.inner.compact(request).await?.into_inner())
     }
 }
-#[derive(Debug, Clone)]
-pub struct DoRangeRequest {
+pub struct DoRangeRequest<'a> {
     pub request: pb::RangeRequest,
-    pub(crate) client: KvClient,
+    pub(crate) client: &'a mut KvClient,
 }
-impl DoRangeRequest {
-    pub fn from_client(client: &KvClient) -> Self {
+impl<'a> DoRangeRequest<'a> {
+    pub fn from_client(client: &'a mut KvClient) -> Self {
         DoRangeRequest {
             request: Default::default(),
-            client: client.clone(),
+            client,
         }
     }
     pub fn with_key(mut self, key: Vec<u8>) -> Self {
@@ -86,29 +85,25 @@ impl DoRangeRequest {
         self
     }
 }
-impl std::future::IntoFuture for DoRangeRequest {
+impl<'a> std::future::IntoFuture for DoRangeRequest<'a> {
     type Output = Result<pb::RangeResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::RangeResponse>>>,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::RangeResponse>> + 'a>,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoRangeRequest {
-            request,
-            mut client,
-        } = self;
+        let DoRangeRequest { request, client } = self;
         Box::pin(async move { client.range(request).await })
     }
 }
-#[derive(Debug, Clone)]
-pub struct DoPutRequest {
+pub struct DoPutRequest<'a> {
     pub request: pb::PutRequest,
-    pub(crate) client: KvClient,
+    pub(crate) client: &'a mut KvClient,
 }
-impl DoPutRequest {
-    pub fn from_client(client: &KvClient) -> Self {
+impl<'a> DoPutRequest<'a> {
+    pub fn from_client(client: &'a mut KvClient) -> Self {
         DoPutRequest {
             request: Default::default(),
-            client: client.clone(),
+            client,
         }
     }
     pub fn with_key(mut self, key: Vec<u8>) -> Self {
@@ -136,28 +131,25 @@ impl DoPutRequest {
         self
     }
 }
-impl std::future::IntoFuture for DoPutRequest {
+impl<'a> std::future::IntoFuture for DoPutRequest<'a> {
     type Output = Result<pb::PutResponse>;
-    type IntoFuture =
-        std::pin::Pin<Box<dyn std::future::Future<Output = crate::error::Result<pb::PutResponse>>>>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::PutResponse>> + 'a>,
+    >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoPutRequest {
-            request,
-            mut client,
-        } = self;
+        let DoPutRequest { request, client } = self;
         Box::pin(async move { client.put(request).await })
     }
 }
-#[derive(Debug, Clone)]
-pub struct DoDeleteRangeRequest {
+pub struct DoDeleteRangeRequest<'a> {
     pub request: pb::DeleteRangeRequest,
-    pub(crate) client: KvClient,
+    pub(crate) client: &'a mut KvClient,
 }
-impl DoDeleteRangeRequest {
-    pub fn from_client(client: &KvClient) -> Self {
+impl<'a> DoDeleteRangeRequest<'a> {
+    pub fn from_client(client: &'a mut KvClient) -> Self {
         DoDeleteRangeRequest {
             request: Default::default(),
-            client: client.clone(),
+            client,
         }
     }
     pub fn with_key(mut self, key: Vec<u8>) -> Self {
@@ -173,54 +165,47 @@ impl DoDeleteRangeRequest {
         self
     }
 }
-impl std::future::IntoFuture for DoDeleteRangeRequest {
+impl<'a> std::future::IntoFuture for DoDeleteRangeRequest<'a> {
     type Output = Result<pb::DeleteRangeResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::DeleteRangeResponse>>>,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::DeleteRangeResponse>> + 'a>,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoDeleteRangeRequest {
-            request,
-            mut client,
-        } = self;
+        let DoDeleteRangeRequest { request, client } = self;
         Box::pin(async move { client.delete_range(request).await })
     }
 }
-#[derive(Debug, Clone)]
-pub struct DoTxnRequest {
+pub struct DoTxnRequest<'a> {
     pub request: pb::TxnRequest,
-    pub(crate) client: KvClient,
+    pub(crate) client: &'a mut KvClient,
 }
-impl DoTxnRequest {
-    pub fn from_client(client: &KvClient) -> Self {
+impl<'a> DoTxnRequest<'a> {
+    pub fn from_client(client: &'a mut KvClient) -> Self {
         DoTxnRequest {
             request: Default::default(),
-            client: client.clone(),
+            client,
         }
     }
 }
-impl std::future::IntoFuture for DoTxnRequest {
+impl<'a> std::future::IntoFuture for DoTxnRequest<'a> {
     type Output = Result<pb::TxnResponse>;
-    type IntoFuture =
-        std::pin::Pin<Box<dyn std::future::Future<Output = crate::error::Result<pb::TxnResponse>>>>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::TxnResponse>> + 'a>,
+    >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoTxnRequest {
-            request,
-            mut client,
-        } = self;
+        let DoTxnRequest { request, client } = self;
         Box::pin(async move { client.txn(request).await })
     }
 }
-#[derive(Debug, Clone)]
-pub struct DoCompactionRequest {
+pub struct DoCompactionRequest<'a> {
     pub request: pb::CompactionRequest,
-    pub(crate) client: KvClient,
+    pub(crate) client: &'a mut KvClient,
 }
-impl DoCompactionRequest {
-    pub fn from_client(client: &KvClient) -> Self {
+impl<'a> DoCompactionRequest<'a> {
+    pub fn from_client(client: &'a mut KvClient) -> Self {
         DoCompactionRequest {
             request: Default::default(),
-            client: client.clone(),
+            client,
         }
     }
     pub fn with_revision(mut self, revision: i64) -> Self {
@@ -232,16 +217,13 @@ impl DoCompactionRequest {
         self
     }
 }
-impl std::future::IntoFuture for DoCompactionRequest {
+impl<'a> std::future::IntoFuture for DoCompactionRequest<'a> {
     type Output = Result<pb::CompactionResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::CompactionResponse>>>,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::CompactionResponse>> + 'a>,
     >;
     fn into_future(self) -> Self::IntoFuture {
-        let DoCompactionRequest {
-            request,
-            mut client,
-        } = self;
+        let DoCompactionRequest { request, client } = self;
         Box::pin(async move { client.compact(request).await })
     }
 }

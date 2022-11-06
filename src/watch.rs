@@ -13,7 +13,6 @@ use tonic::codec::Streaming;
 
 const MPSC_CHANNEL_SIZE: usize = 1;
 
-#[derive(Debug, Clone)]
 pub struct WatchClient {
     inner: PbWatchClient<Transport>,
 }
@@ -40,7 +39,7 @@ impl WatchClient {
     /// # Ok(())
     /// # }
     pub fn do_watch(&mut self, key: impl AsRef<[u8]>) -> DoCreateWatch {
-        DoCreateWatch::new(key, self.clone())
+        DoCreateWatch::new(key, self)
     }
 
     pub async fn watch(
@@ -61,13 +60,13 @@ impl WatchClient {
     }
 }
 
-pub struct DoCreateWatch {
+pub struct DoCreateWatch<'a> {
     pub request: pb::WatchCreateRequest,
-    client: WatchClient,
+    client: &'a mut WatchClient,
 }
 
-impl DoCreateWatch {
-    pub fn new(key: impl AsRef<[u8]>, client: WatchClient) -> Self {
+impl<'a> DoCreateWatch<'a> {
+    pub fn new(key: impl AsRef<[u8]>, client: &'a mut WatchClient) -> Self {
         DoCreateWatch {
             request: pb::WatchCreateRequest::new(key),
             client,
@@ -75,10 +74,7 @@ impl DoCreateWatch {
     }
 
     async fn send(self) -> Result<Watcher> {
-        let DoCreateWatch {
-            request,
-            mut client,
-        } = self;
+        let DoCreateWatch { request, client } = self;
 
         let create_watch = pb::watch_request::RequestUnion::CreateRequest(request);
         let create_req = pb::WatchRequest {
@@ -123,7 +119,7 @@ impl DoCreateWatch {
     }
 }
 
-impl fmt::Debug for DoCreateWatch {
+impl<'a> fmt::Debug for DoCreateWatch<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DoCreateWatch")
             .field("request", &self.request)
@@ -131,9 +127,9 @@ impl fmt::Debug for DoCreateWatch {
     }
 }
 
-impl IntoFuture for DoCreateWatch {
+impl<'a> IntoFuture for DoCreateWatch<'a> {
     type Output = Result<Watcher>;
-    type IntoFuture = Pin<Box<dyn Future<Output = Result<Watcher>>>>;
+    type IntoFuture = Pin<Box<dyn Future<Output = Result<Watcher>> + 'a>>;
 
     fn into_future(self) -> Self::IntoFuture {
         Box::pin(self.send())

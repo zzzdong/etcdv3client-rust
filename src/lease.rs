@@ -14,7 +14,6 @@ use helper::*;
 
 const MPSC_CHANNEL_SIZE: usize = 1;
 
-#[derive(Debug, Clone)]
 pub struct LeaseClient {
     inner: PbLeaseClient<Transport>,
 }
@@ -81,11 +80,11 @@ impl pb::LeaseGrantRequest {
     }
 }
 
-impl DoLeaseGrantRequest {
-    pub fn new(ttl: i64, client: &LeaseClient) -> Self {
+impl<'a> DoLeaseGrantRequest<'a> {
+    pub fn new(ttl: i64, client: &'a mut LeaseClient) -> Self {
         DoLeaseGrantRequest {
             request: pb::LeaseGrantRequest::new(ttl, 0),
-            client: client.clone(),
+            client,
         }
     }
 
@@ -107,24 +106,18 @@ impl pb::LeaseKeepAliveRequest {
     }
 }
 
-pub struct DoLeaseKeepAlive {
+pub struct DoLeaseKeepAlive<'a> {
     pub lease_id: i64,
-    client: LeaseClient,
+    client: &'a mut LeaseClient,
 }
 
-impl DoLeaseKeepAlive {
-    pub fn new(lease_id: i64, client: &LeaseClient) -> Self {
-        DoLeaseKeepAlive {
-            lease_id,
-            client: client.clone(),
-        }
+impl<'a> DoLeaseKeepAlive<'a> {
+    pub fn new(lease_id: i64, client: &'a mut LeaseClient) -> Self {
+        DoLeaseKeepAlive { lease_id, client }
     }
 
     async fn send(self) -> Result<LeaseKeepAliver> {
-        let DoLeaseKeepAlive {
-            lease_id,
-            mut client,
-        } = self;
+        let DoLeaseKeepAlive { lease_id, client } = self;
 
         let (req_tx, req_rx) = channel::<pb::LeaseKeepAliveRequest>(MPSC_CHANNEL_SIZE);
 
@@ -141,7 +134,7 @@ impl DoLeaseKeepAlive {
     }
 }
 
-impl fmt::Debug for DoLeaseKeepAlive {
+impl<'a> fmt::Debug for DoLeaseKeepAlive<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DoLeaseKeepAlive")
             .field("lease_id", &self.lease_id)
@@ -149,9 +142,9 @@ impl fmt::Debug for DoLeaseKeepAlive {
     }
 }
 
-impl IntoFuture for DoLeaseKeepAlive {
+impl<'a> IntoFuture for DoLeaseKeepAlive<'a> {
     type Output = Result<LeaseKeepAliver>;
-    type IntoFuture = Pin<Box<dyn Future<Output = Result<LeaseKeepAliver>>>>;
+    type IntoFuture = Pin<Box<dyn Future<Output = Result<LeaseKeepAliver>> + 'a>>;
 
     fn into_future(self) -> Self::IntoFuture {
         Box::pin(self.send())
