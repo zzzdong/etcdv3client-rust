@@ -88,7 +88,7 @@ impl<'a> DoRangeRequest<'a> {
 impl<'a> std::future::IntoFuture for DoRangeRequest<'a> {
     type Output = Result<pb::RangeResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::RangeResponse>> + 'a>,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::RangeResponse>> + Send + 'a>,
     >;
     fn into_future(self) -> Self::IntoFuture {
         let DoRangeRequest { request, client } = self;
@@ -134,7 +134,7 @@ impl<'a> DoPutRequest<'a> {
 impl<'a> std::future::IntoFuture for DoPutRequest<'a> {
     type Output = Result<pb::PutResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::PutResponse>> + 'a>,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::PutResponse>> + Send + 'a>,
     >;
     fn into_future(self) -> Self::IntoFuture {
         let DoPutRequest { request, client } = self;
@@ -168,7 +168,11 @@ impl<'a> DoDeleteRangeRequest<'a> {
 impl<'a> std::future::IntoFuture for DoDeleteRangeRequest<'a> {
     type Output = Result<pb::DeleteRangeResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::DeleteRangeResponse>> + 'a>,
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::DeleteRangeResponse>>
+                + Send
+                + 'a,
+        >,
     >;
     fn into_future(self) -> Self::IntoFuture {
         let DoDeleteRangeRequest { request, client } = self;
@@ -190,7 +194,7 @@ impl<'a> DoTxnRequest<'a> {
 impl<'a> std::future::IntoFuture for DoTxnRequest<'a> {
     type Output = Result<pb::TxnResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::TxnResponse>> + 'a>,
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::TxnResponse>> + Send + 'a>,
     >;
     fn into_future(self) -> Self::IntoFuture {
         let DoTxnRequest { request, client } = self;
@@ -220,7 +224,11 @@ impl<'a> DoCompactionRequest<'a> {
 impl<'a> std::future::IntoFuture for DoCompactionRequest<'a> {
     type Output = Result<pb::CompactionResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::CompactionResponse>> + 'a>,
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::CompactionResponse>>
+                + Send
+                + 'a,
+        >,
     >;
     fn into_future(self) -> Self::IntoFuture {
         let DoCompactionRequest { request, client } = self;

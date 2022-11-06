@@ -13,6 +13,7 @@ use tonic::codec::Streaming;
 
 const MPSC_CHANNEL_SIZE: usize = 1;
 
+#[derive(Debug, Clone)]
 pub struct WatchClient {
     inner: PbWatchClient<Transport>,
 }
@@ -129,7 +130,7 @@ impl<'a> fmt::Debug for DoCreateWatch<'a> {
 
 impl<'a> IntoFuture for DoCreateWatch<'a> {
     type Output = Result<Watcher>;
-    type IntoFuture = Pin<Box<dyn Future<Output = Result<Watcher>> + 'a>>;
+    type IntoFuture = Pin<Box<dyn Future<Output = Result<Watcher>> + Send + 'a>>;
 
     fn into_future(self) -> Self::IntoFuture {
         Box::pin(self.send())

@@ -125,7 +125,11 @@ impl<'a> DoAuthEnableRequest<'a> {
 impl<'a> std::future::IntoFuture for DoAuthEnableRequest<'a> {
     type Output = Result<pb::AuthEnableResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthEnableResponse>> + 'a>,
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::AuthEnableResponse>>
+                + Send
+                + 'a,
+        >,
     >;
     fn into_future(self) -> Self::IntoFuture {
         let DoAuthEnableRequest { request, client } = self;
@@ -147,7 +151,11 @@ impl<'a> DoAuthDisableRequest<'a> {
 impl<'a> std::future::IntoFuture for DoAuthDisableRequest<'a> {
     type Output = Result<pb::AuthDisableResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthDisableResponse>> + 'a>,
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::AuthDisableResponse>>
+                + Send
+                + 'a,
+        >,
     >;
     fn into_future(self) -> Self::IntoFuture {
         let DoAuthDisableRequest { request, client } = self;
@@ -169,7 +177,11 @@ impl<'a> DoAuthStatusRequest<'a> {
 impl<'a> std::future::IntoFuture for DoAuthStatusRequest<'a> {
     type Output = Result<pb::AuthStatusResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthStatusResponse>> + 'a>,
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::AuthStatusResponse>>
+                + Send
+                + 'a,
+        >,
     >;
     fn into_future(self) -> Self::IntoFuture {
         let DoAuthStatusRequest { request, client } = self;
@@ -199,7 +211,11 @@ impl<'a> DoAuthenticateRequest<'a> {
 impl<'a> std::future::IntoFuture for DoAuthenticateRequest<'a> {
     type Output = Result<pb::AuthenticateResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthenticateResponse>> + 'a>,
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::AuthenticateResponse>>
+                + Send
+                + 'a,
+        >,
     >;
     fn into_future(self) -> Self::IntoFuture {
         let DoAuthenticateRequest { request, client } = self;
@@ -233,7 +249,11 @@ impl<'a> DoAuthUserAddRequest<'a> {
 impl<'a> std::future::IntoFuture for DoAuthUserAddRequest<'a> {
     type Output = Result<pb::AuthUserAddResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthUserAddResponse>> + 'a>,
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::AuthUserAddResponse>>
+                + Send
+                + 'a,
+        >,
     >;
     fn into_future(self) -> Self::IntoFuture {
         let DoAuthUserAddRequest { request, client } = self;
@@ -259,7 +279,11 @@ impl<'a> DoAuthUserGetRequest<'a> {
 impl<'a> std::future::IntoFuture for DoAuthUserGetRequest<'a> {
     type Output = Result<pb::AuthUserGetResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthUserGetResponse>> + 'a>,
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::AuthUserGetResponse>>
+                + Send
+                + 'a,
+        >,
     >;
     fn into_future(self) -> Self::IntoFuture {
         let DoAuthUserGetRequest { request, client } = self;
@@ -281,7 +305,11 @@ impl<'a> DoAuthUserListRequest<'a> {
 impl<'a> std::future::IntoFuture for DoAuthUserListRequest<'a> {
     type Output = Result<pb::AuthUserListResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthUserListResponse>> + 'a>,
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::AuthUserListResponse>>
+                + Send
+                + 'a,
+        >,
     >;
     fn into_future(self) -> Self::IntoFuture {
         let DoAuthUserListRequest { request, client } = self;
@@ -308,7 +336,9 @@ impl<'a> std::future::IntoFuture for DoAuthUserDeleteRequest<'a> {
     type Output = Result<pb::AuthUserDeleteResponse>;
     type IntoFuture = std::pin::Pin<
         Box<
-            dyn std::future::Future<Output = crate::error::Result<pb::AuthUserDeleteResponse>> + 'a,
+            dyn std::future::Future<Output = crate::error::Result<pb::AuthUserDeleteResponse>>
+                + Send
+                + 'a,
         >,
     >;
     fn into_future(self) -> Self::IntoFuture {
@@ -346,7 +376,8 @@ impl<'a> std::future::IntoFuture for DoAuthUserChangePasswordRequest<'a> {
         Box<
             dyn std::future::Future<
                     Output = crate::error::Result<pb::AuthUserChangePasswordResponse>,
-                > + 'a,
+                > + Send
+                + 'a,
         >,
     >;
     fn into_future(self) -> Self::IntoFuture {
@@ -379,6 +410,7 @@ impl<'a> std::future::IntoFuture for DoAuthUserGrantRoleRequest<'a> {
     type IntoFuture = std::pin::Pin<
         Box<
             dyn std::future::Future<Output = crate::error::Result<pb::AuthUserGrantRoleResponse>>
+                + Send
                 + 'a,
         >,
     >;
@@ -412,6 +444,7 @@ impl<'a> std::future::IntoFuture for DoAuthUserRevokeRoleRequest<'a> {
     type IntoFuture = std::pin::Pin<
         Box<
             dyn std::future::Future<Output = crate::error::Result<pb::AuthUserRevokeRoleResponse>>
+                + Send
                 + 'a,
         >,
     >;
@@ -439,7 +472,11 @@ impl<'a> DoAuthRoleAddRequest<'a> {
 impl<'a> std::future::IntoFuture for DoAuthRoleAddRequest<'a> {
     type Output = Result<pb::AuthRoleAddResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleAddResponse>> + 'a>,
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleAddResponse>>
+                + Send
+                + 'a,
+        >,
     >;
     fn into_future(self) -> Self::IntoFuture {
         let DoAuthRoleAddRequest { request, client } = self;
@@ -465,7 +502,11 @@ impl<'a> DoAuthRoleGetRequest<'a> {
 impl<'a> std::future::IntoFuture for DoAuthRoleGetRequest<'a> {
     type Output = Result<pb::AuthRoleGetResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleGetResponse>> + 'a>,
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleGetResponse>>
+                + Send
+                + 'a,
+        >,
     >;
     fn into_future(self) -> Self::IntoFuture {
         let DoAuthRoleGetRequest { request, client } = self;
@@ -487,7 +528,11 @@ impl<'a> DoAuthRoleListRequest<'a> {
 impl<'a> std::future::IntoFuture for DoAuthRoleListRequest<'a> {
     type Output = Result<pb::AuthRoleListResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleListResponse>> + 'a>,
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleListResponse>>
+                + Send
+                + 'a,
+        >,
     >;
     fn into_future(self) -> Self::IntoFuture {
         let DoAuthRoleListRequest { request, client } = self;
@@ -514,7 +559,9 @@ impl<'a> std::future::IntoFuture for DoAuthRoleDeleteRequest<'a> {
     type Output = Result<pb::AuthRoleDeleteResponse>;
     type IntoFuture = std::pin::Pin<
         Box<
-            dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleDeleteResponse>> + 'a,
+            dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleDeleteResponse>>
+                + Send
+                + 'a,
         >,
     >;
     fn into_future(self) -> Self::IntoFuture {
@@ -544,7 +591,8 @@ impl<'a> std::future::IntoFuture for DoAuthRoleGrantPermissionRequest<'a> {
         Box<
             dyn std::future::Future<
                     Output = crate::error::Result<pb::AuthRoleGrantPermissionResponse>,
-                > + 'a,
+                > + Send
+                + 'a,
         >,
     >;
     fn into_future(self) -> Self::IntoFuture {
@@ -582,7 +630,8 @@ impl<'a> std::future::IntoFuture for DoAuthRoleRevokePermissionRequest<'a> {
         Box<
             dyn std::future::Future<
                     Output = crate::error::Result<pb::AuthRoleRevokePermissionResponse>,
-                > + 'a,
+                > + Send
+                + 'a,
         >,
     >;
     fn into_future(self) -> Self::IntoFuture {

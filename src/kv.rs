@@ -6,6 +6,7 @@ use crate::Client;
 
 use helper::*;
 
+#[derive(Debug, Clone)]
 pub struct KvClient {
     inner: PbKvClient<Transport>,
 }

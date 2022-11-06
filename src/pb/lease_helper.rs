@@ -47,7 +47,11 @@ impl<'a> DoLeaseGrantRequest<'a> {
 impl<'a> std::future::IntoFuture for DoLeaseGrantRequest<'a> {
     type Output = Result<pb::LeaseGrantResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::LeaseGrantResponse>> + 'a>,
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::LeaseGrantResponse>>
+                + Send
+                + 'a,
+        >,
     >;
     fn into_future(self) -> Self::IntoFuture {
         let DoLeaseGrantRequest { request, client } = self;
@@ -73,7 +77,11 @@ impl<'a> DoLeaseRevokeRequest<'a> {
 impl<'a> std::future::IntoFuture for DoLeaseRevokeRequest<'a> {
     type Output = Result<pb::LeaseRevokeResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::LeaseRevokeResponse>> + 'a>,
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::LeaseRevokeResponse>>
+                + Send
+                + 'a,
+        >,
     >;
     fn into_future(self) -> Self::IntoFuture {
         let DoLeaseRevokeRequest { request, client } = self;
@@ -105,6 +113,7 @@ impl<'a> std::future::IntoFuture for DoLeaseTimeToLiveRequest<'a> {
     type IntoFuture = std::pin::Pin<
         Box<
             dyn std::future::Future<Output = crate::error::Result<pb::LeaseTimeToLiveResponse>>
+                + Send
                 + 'a,
         >,
     >;
@@ -128,7 +137,11 @@ impl<'a> DoLeaseLeasesRequest<'a> {
 impl<'a> std::future::IntoFuture for DoLeaseLeasesRequest<'a> {
     type Output = Result<pb::LeaseLeasesResponse>;
     type IntoFuture = std::pin::Pin<
-        Box<dyn std::future::Future<Output = crate::error::Result<pb::LeaseLeasesResponse>> + 'a>,
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::LeaseLeasesResponse>>
+                + Send
+                + 'a,
+        >,
     >;
     fn into_future(self) -> Self::IntoFuture {
         let DoLeaseLeasesRequest { request, client } = self;

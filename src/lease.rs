@@ -14,6 +14,7 @@ use helper::*;
 
 const MPSC_CHANNEL_SIZE: usize = 1;
 
+#[derive(Debug, Clone)]
 pub struct LeaseClient {
     inner: PbLeaseClient<Transport>,
 }
