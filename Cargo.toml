@@ -1,6 +1,6 @@
 [package]
 name = "etcdv3client"
-version = "0.3.0-beta.2"
+version = "0.3.0-beta.3"
 authors = ["zzzdong <kuwater@163.com>"]
 edition = "2021"
 license = "MIT"
