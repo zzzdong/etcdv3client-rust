@@ -21,7 +21,7 @@ fn gen_pb_code() {
         .compile(&["proto/kv.proto"], &["proto/"])
         .unwrap_or_else(|e| panic!("protobuf compilation failed: {}", e));
 
-    // Build rpc
+    // Build rpc.proto
     tonic_build::configure()
         .build_server(false)
         .out_dir("src/pb/")

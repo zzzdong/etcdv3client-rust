@@ -2,34 +2,69 @@ use std::fmt;
 use std::future::{Future, IntoFuture};
 use std::pin::Pin;
 
-use crate::client::Transport;
 use crate::error::{ErrKind, Error, Result};
-use crate::pb::{self, watch_client::WatchClient as PbWatchClient};
+use crate::pb;
+use crate::transport::{GrpcService, Transport};
 use crate::utils::build_prefix_end;
 use crate::Client;
 
 use tokio::sync::mpsc::{channel, Sender};
 use tonic::codec::Streaming;
+use tonic::IntoStreamingRequest;
 
 const MPSC_CHANNEL_SIZE: usize = 1;
 
 #[derive(Debug, Clone)]
+pub struct InnerWatchClient<S> {
+    transport: S,
+}
+impl<S> InnerWatchClient<S>
+where
+    S: GrpcService,
+{
+    pub fn new(transport: S) -> Self {
+        Self { transport }
+    }
+    pub async fn watch(
+        &mut self,
+        request: impl tonic::IntoStreamingRequest<Message = pb::WatchRequest>,
+    ) -> Result<tonic::Response<tonic::codec::Streaming<pb::WatchResponse>>> {
+        let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Watch/Watch");
+        self.transport
+            .streaming(request.into_streaming_request(), path)
+            .await
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct WatchClient {
-    inner: PbWatchClient<Transport>,
+    inner: InnerWatchClient<Transport>,
+}
+
+impl WatchClient {
+    pub async fn watch(
+        &mut self,
+        request: impl tonic::IntoStreamingRequest<Message = pb::WatchRequest>,
+    ) -> Result<tonic::codec::Streaming<pb::WatchResponse>> {
+        self.inner
+            .watch(request.into_streaming_request())
+            .await
+            .map(|rsp| rsp.into_inner())
+    }
 }
 
 impl WatchClient {
     pub(crate) fn new(transport: Transport) -> Self {
-        let inner = PbWatchClient::new(transport);
-
-        WatchClient { inner }
+        WatchClient {
+            inner: InnerWatchClient::new(transport),
+        }
     }
 
     pub fn with_client(client: &Client) -> Self {
         Self::new(client.transport.clone())
     }
 
-    /// watch
+    /// do watch
     ///
     /// ```no_run
     /// # use etcdv3client::{Client, Error, WatchClient};
@@ -41,13 +76,6 @@ impl WatchClient {
     /// # }
     pub fn do_watch(&mut self, key: impl AsRef<[u8]>) -> DoCreateWatch {
         DoCreateWatch::new(key, self)
-    }
-
-    pub async fn watch(
-        &mut self,
-        request: impl tonic::IntoStreamingRequest<Message = pb::WatchRequest>,
-    ) -> Result<tonic::codec::Streaming<pb::WatchResponse>> {
-        Ok(self.inner.watch(request).await?.into_inner())
     }
 
     /// watch a key
@@ -89,7 +117,7 @@ impl<'a> DoCreateWatch<'a> {
             .map_err(|err| Error::new(ErrKind::WatchRequestFailed, err))?;
 
         let rx = tokio_stream::wrappers::ReceiverStream::new(req_rx);
-        let mut resp = client.watch(rx).await?;
+        let mut resp = client.watch(rx.into_streaming_request()).await?;
 
         let watch_id = match resp.message().await? {
             Some(msg) => msg.watch_id,

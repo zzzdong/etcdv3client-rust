@@ -1,21 +1,17 @@
-use std::sync::{Arc, RwLock};
-
 use crate::error::{ErrKind, Error, Result};
-use crate::interceptor::CredentialInterceptor;
 use crate::pb;
+use crate::transport::CredentialInterceptor;
 
-use crate::auth::AuthClient;
+use crate::auth::{AuthClient, InnerAuthClient};
 use crate::kv::KvClient;
 use crate::lease::{LeaseClient, LeaseKeepAliver};
+use crate::transport::{GrpcClient, Transport};
 use crate::watch::{WatchClient, Watcher};
 
 use http::Uri;
-use tonic::codegen::InterceptedService;
 use tonic::transport::{channel::Channel, Endpoint};
 
-pub(crate) type Transport =
-    InterceptedService<tonic::transport::channel::Channel, CredentialInterceptor>;
-
+#[derive(Debug, Clone)]
 pub struct Client {
     pub kv: KvClient,
     pub auth: AuthClient,
@@ -23,9 +19,6 @@ pub struct Client {
     pub lease: LeaseClient,
 
     pub(crate) transport: Transport,
-
-    credential: Option<(String, String)>,
-    token: Arc<RwLock<String>>,
 }
 
 impl Client {
@@ -56,9 +49,11 @@ impl Client {
         };
 
         let channel = new_channel(ep_uris).await?;
-        let token = Arc::new(RwLock::new(token));
-
-        let transport = InterceptedService::new(channel, CredentialInterceptor::new(token.clone()));
+        let transport = CredentialInterceptor::new(
+            credential.unwrap_or_default(),
+            &token,
+            GrpcClient::new(channel),
+        );
 
         Ok(Client {
             auth: AuthClient::new(transport.clone()),
@@ -66,8 +61,6 @@ impl Client {
             watch: WatchClient::new(transport.clone()),
             lease: LeaseClient::new(transport.clone()),
             transport,
-            credential,
-            token,
         })
     }
 
@@ -141,26 +134,28 @@ impl Client {
         self.lease.list().await
     }
 
-    /// Refresh token
-    pub async fn refresh_token(&mut self) -> Result<()> {
-        if let Some((username, password)) = &self.credential {
-            let token = self.auth.get_token(username, password).await?;
+    // /// Refresh token
+    // pub async fn refresh_token(&mut self) -> Result<()> {
+    //     if let Some((username, password)) = &self.credential {
+    //         let token = self.auth.get_token(username, password).await?;
 
-            *self.token.write().unwrap() = token;
-        }
+    //         *self.token.write().unwrap() = token;
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 }
 
 async fn get_token(endpoints: &[Uri], name: &str, password: &str) -> Result<String> {
     for ep in endpoints {
         let channel = connect_to(ep.to_owned()).await?;
-        let transport = InterceptedService::new(channel, CredentialInterceptor::empty());
 
-        let mut auth_client = AuthClient::new(transport);
+        let mut auth_client = InnerAuthClient::new(GrpcClient::new(channel));
 
-        match auth_client.get_token(name, password).await {
+        match auth_client
+            .get_token(name.to_string(), password.to_string())
+            .await
+        {
             Ok(token) => {
                 return Ok(token);
             }

@@ -110,6 +110,10 @@ impl Error {
     pub fn is_invalid_auth_token(&self) -> bool {
         self.kind == ErrKind::InvalidAuthToken
     }
+
+    pub fn should_refresh_token(&self) -> bool {
+        self.kind == ErrKind::InvalidAuthToken || self.kind == ErrKind::AuthOldRevision
+    }
 }
 
 impl Display for Error {

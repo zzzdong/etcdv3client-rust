@@ -31,8 +31,8 @@
 
 mod client;
 mod error;
-mod interceptor;
 pub mod pb;
+mod transport;
 mod utils;
 
 mod auth;
