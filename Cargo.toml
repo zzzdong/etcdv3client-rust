@@ -25,14 +25,13 @@ gen = [ "tonic-build" ]
 futures = "0.3"
 http = "0.2"
 prost = "0.11"
-thiserror = "1.0"
-tonic = { version = "0.8" }
+tonic = { version = "0.9" }
 tokio = { version = "1.0", features = ["sync", "time"] }
 tokio-stream = "0.1"
 
 
 [build-dependencies]
-tonic-build = { version = "0.8", optional = true }
+tonic-build = { version = "0.9", optional = true }
 
 
 [dev-dependencies]
