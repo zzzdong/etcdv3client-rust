@@ -1,6 +1,6 @@
 [package]
 name = "etcdv3client"
-version = "0.3.0-beta.4"
+version = "0.3.0"
 authors = ["zzzdong <kuwater@163.com>"]
 edition = "2021"
 license = "MIT"
@@ -24,14 +24,14 @@ gen = [ "tonic-build" ]
 [dependencies]
 futures = "0.3"
 http = "0.2"
-prost = "0.11"
-tonic = { version = "0.9" }
+prost = "0.12"
+tonic = { version = "0.11" }
 tokio = { version = "1.0", features = ["sync", "time"] }
 tokio-stream = "0.1"
 
 
 [build-dependencies]
-tonic-build = { version = "0.9", optional = true }
+tonic-build = { version = "0.11", optional = true }
 
 
 [dev-dependencies]
