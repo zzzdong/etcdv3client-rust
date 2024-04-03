@@ -74,17 +74,17 @@ impl WatchClient {
     /// let resp = WatchClient::with_client(&client).do_watch("hello").with_prefix().await.unwrap();
     /// # Ok(())
     /// # }
-    pub fn do_watch(&mut self, key: impl AsRef<[u8]>) -> DoCreateWatch {
+    pub fn do_watch(&mut self, key: impl Into<Vec<u8>>) -> DoCreateWatch {
         DoCreateWatch::new(key, self)
     }
 
     /// watch a key
-    pub async fn watch_key(&mut self, key: impl AsRef<[u8]>) -> Result<Watcher> {
+    pub async fn watch_key(&mut self, key: impl Into<Vec<u8>>) -> Result<Watcher> {
         self.do_watch(key).await
     }
 
     /// watch a key with prefix
-    pub async fn watch_prefix(&mut self, key: impl AsRef<[u8]>) -> Result<Watcher> {
+    pub async fn watch_prefix(&mut self, key: impl Into<Vec<u8>>) -> Result<Watcher> {
         self.do_watch(key).with_prefix().await
     }
 }
@@ -95,7 +95,7 @@ pub struct DoCreateWatch<'a> {
 }
 
 impl<'a> DoCreateWatch<'a> {
-    pub fn new(key: impl AsRef<[u8]>, client: &'a mut WatchClient) -> Self {
+    pub fn new(key: impl Into<Vec<u8>>, client: &'a mut WatchClient) -> Self {
         DoCreateWatch {
             request: pb::WatchCreateRequest::new(key),
             client,
@@ -130,8 +130,8 @@ impl<'a> DoCreateWatch<'a> {
     }
 
     /// The key range end to fetch.
-    pub fn with_range_end(mut self, end: impl AsRef<[u8]>) -> Self {
-        self.request.range_end = end.as_ref().to_vec();
+    pub fn with_range_end(mut self, end: impl Into<Vec<u8>>) -> Self {
+        self.request.range_end = end.into();
         self
     }
 
@@ -166,16 +166,16 @@ impl<'a> IntoFuture for DoCreateWatch<'a> {
 }
 
 impl pb::WatchCreateRequest {
-    pub fn new(key: impl AsRef<[u8]>) -> Self {
+    pub fn new(key: impl Into<Vec<u8>>) -> Self {
         pb::WatchCreateRequest {
-            key: key.as_ref().to_vec(),
+            key: key.into(),
             ..Default::default()
         }
     }
 }
 
 impl pb::WatchRequest {
-    pub fn create_watch(key: impl AsRef<[u8]>) -> Self {
+    pub fn create_watch(key: impl Into<Vec<u8>>) -> Self {
         let request = pb::WatchCreateRequest::new(key);
         let request_union = pb::watch_request::RequestUnion::CreateRequest(request);
 

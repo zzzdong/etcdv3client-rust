@@ -1,5 +1,5 @@
 use http::uri::PathAndQuery;
-use tonic::{async_trait, metadata::AsciiMetadataValue};
+use tonic::{metadata::AsciiMetadataValue, Extensions};
 
 use crate::{auth::InnerAuthClient, error::Result, Error};
 
@@ -7,7 +7,6 @@ const TOKEN_FIELD_NAME: &str = "token";
 
 pub(crate) type Transport = CredentialInterceptor<GrpcClient>;
 
-#[async_trait]
 pub trait GrpcService {
     async fn unary<M, T>(
         &mut self,
@@ -152,7 +151,6 @@ impl GrpcClient {
     }
 }
 
-#[async_trait]
 impl GrpcService for GrpcClient {
     async fn unary<M, T>(
         &mut self,
@@ -207,8 +205,8 @@ impl GrpcService for GrpcClient {
 
 #[derive(Debug, Clone)]
 pub(crate) struct CredentialInterceptor<C> {
-    credential: (String, String),
-    token: AsciiMetadataValue,
+    credential: Option<(String, String)>,
+    token: Option<AsciiMetadataValue>,
     inner: C,
 }
 
@@ -216,10 +214,15 @@ impl<C> CredentialInterceptor<C>
 where
     C: GrpcService + Clone,
 {
-    pub fn new(credential: (String, String), token: &str, inner: C) -> Self {
+    pub fn new(
+        credential: impl Into<Option<(String, String)>>,
+        token: impl Into<Option<AsciiMetadataValue>>,
+        inner: C,
+    ) -> Self
+    {
         Self {
-            credential,
-            token: AsciiMetadataValue::try_from(token).unwrap(),
+            credential: credential.into(),
+            token: token.into(),
             inner,
         }
     }
@@ -235,16 +238,16 @@ where
     {
         self.insert_token(&mut req);
 
-        let (mut req, req_cloned) = Self::clone_request(req);
+        let (req, mut req_cloned) = Self::clone_request(req);
 
-        match self.inner.unary(req_cloned, path.clone()).await {
+        match self.inner.unary(req, path.clone()).await {
             Ok(resp) => Ok(resp),
             Err(err) => {
                 if err.should_refresh_token() {
                     self.refresh_token().await?;
-                    self.insert_token(&mut req);
+                    self.insert_token(&mut req_cloned);
 
-                    self.inner.unary(req, path).await
+                    self.inner.unary(req_cloned, path).await
                 } else {
                     Err(err)
                 }
@@ -279,16 +282,16 @@ where
         T: prost::Message + Default + Send + Sync + 'static,
     {
         self.insert_token(&mut req);
-        let (mut req, req_cloned) = Self::clone_request(req);
+        let (req, mut req_cloned) = Self::clone_request(req);
 
-        match self.inner.server_streaming(req_cloned, path.clone()).await {
+        match self.inner.server_streaming(req, path.clone()).await {
             Ok(resp) => Ok(resp),
             Err(err) => {
                 if self.should_refresh_token(&err) {
                     self.refresh_token().await?;
-                    self.insert_token(&mut req);
+                    self.insert_token(&mut req_cloned);
 
-                    self.inner.server_streaming(req, path).await
+                    self.inner.server_streaming(req_cloned, path).await
                 } else {
                     Err(err)
                 }
@@ -313,20 +316,20 @@ where
         self.inner.streaming(req, path).await
     }
 
+    /// Clone request.
+    /// Note: the cloned request will lost Extensions!
     fn clone_request<M: Clone>(req: tonic::Request<M>) -> (tonic::Request<M>, tonic::Request<M>) {
-        let (metadata, _extensions, message) = req.into_parts();
+        let (metadata, extensions, message) = req.into_parts();
 
-        let mut req_cloned = tonic::Request::new(message.clone());
-        *req_cloned.metadata_mut() = metadata.clone();
-
-        let mut req = tonic::Request::new(message);
-        *req.metadata_mut() = metadata;
+        let req_cloned =
+            tonic::Request::from_parts(metadata.clone(), Extensions::default(), message.clone());
+        let req = tonic::Request::from_parts(metadata, extensions, message);
 
         (req, req_cloned)
     }
 
     fn should_refresh_token(&self, err: &Error) -> bool {
-        if self.credential.0.is_empty() || self.credential.1.is_empty() {
+        if self.credential.is_none() {
             return false;
         }
 
@@ -334,27 +337,26 @@ where
     }
 
     fn insert_token<M>(&self, req: &mut tonic::Request<M>) {
-        if !self.token.is_empty() {
-            req.metadata_mut()
-                .insert(TOKEN_FIELD_NAME, self.token.clone());
+        if let Some(ref token) = self.token {
+            req.metadata_mut().insert(TOKEN_FIELD_NAME, token.clone());
         }
     }
 
     async fn refresh_token(&mut self) -> Result<()> {
-        if !self.credential.0.is_empty() {
+        if let Some(ref cred) = self.credential {
             let token = InnerAuthClient::new(self.inner.clone())
-                .get_token(&self.credential.0, &self.credential.1)
+                .get_token(&cred.0, &cred.1)
                 .await?;
 
-            self.token =
-                AsciiMetadataValue::try_from(token).expect("token to AsciiMetadataValue failed");
+            self.token = AsciiMetadataValue::try_from(token)
+                .expect("token to AsciiMetadataValue failed")
+                .into();
         }
 
         Ok(())
     }
 }
 
-#[async_trait]
 impl<C> GrpcService for CredentialInterceptor<C>
 where
     C: GrpcService + Send + Sync + Clone,

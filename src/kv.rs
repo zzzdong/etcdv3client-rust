@@ -121,17 +121,18 @@ impl KvClient {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn do_range(&mut self, key: impl AsRef<[u8]>) -> DoRangeRequest {
+    pub fn do_range(&mut self, key: impl Into<Vec<u8>>) -> DoRangeRequest {
         DoRangeRequest::new(key, self)
     }
 
     /// Get value by key
     #[inline]
-    pub async fn get(&mut self, key: impl AsRef<[u8]>) -> Result<Vec<u8>> {
-        let resp = self.do_range(key).await?;
+    pub async fn get(&mut self, key: impl Into<Vec<u8>>) -> Result<Vec<u8>> {
+        let resp = self.do_range(key).with_limit(1).await?;
         let kv = resp
             .kvs
-            .first()
+            .into_iter()
+            .next()
             .ok_or_else(|| Error::from_kind(ErrKind::KeyNotFound))?;
         Ok(kv.value.clone())
     }
@@ -148,7 +149,7 @@ impl KvClient {
     /// # }
     /// ```
     #[inline]
-    pub async fn get_string(&mut self, key: impl AsRef<[u8]>) -> Result<String> {
+    pub async fn get_string(&mut self, key: impl Into<Vec<u8>>) -> Result<String> {
         let value = self.get(key).await?;
 
         String::from_utf8(value).map_err(|err| Error::new(ErrKind::InvalidData, err))
@@ -156,10 +157,10 @@ impl KvClient {
 
     /// Get key-value pairs with prefix
     #[inline]
-    pub async fn get_with_prefix(&mut self, key: impl AsRef<[u8]>) -> Result<Vec<pb::KeyValue>> {
+    pub async fn get_with_prefix(&mut self, key: impl Into<Vec<u8>>) -> Result<Vec<pb::KeyValue>> {
         let resp = self.do_range(key).with_prefix().await?;
 
-        Ok(resp.kvs.to_vec())
+        Ok(resp.kvs)
     }
 
     /// Get all key-value pairs
@@ -167,7 +168,7 @@ impl KvClient {
     pub async fn all(&mut self) -> Result<Vec<pb::KeyValue>> {
         let resp = self.do_range([0x00]).with_range_end(vec![0x00]).await?;
 
-        Ok(resp.kvs.to_vec())
+        Ok(resp.kvs)
     }
 
     /// Do put request
@@ -180,12 +181,16 @@ impl KvClient {
     /// let resp = KvClient::with_client(&client).do_put("hello", "world").with_prev_kv(true).await.unwrap();
     /// # Ok(())
     /// # }
-    pub fn do_put(&mut self, key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> DoPutRequest {
+    pub fn do_put(&mut self, key: impl Into<Vec<u8>>, value: impl Into<Vec<u8>>) -> DoPutRequest {
         DoPutRequest::new(key, value, self)
     }
 
     /// Put a key-value paire
-    pub async fn put_kv(&mut self, key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> Result<()> {
+    pub async fn put_kv(
+        &mut self,
+        key: impl Into<Vec<u8>>,
+        value: impl Into<Vec<u8>>,
+    ) -> Result<()> {
         self.do_put(key, value).await.map(|_| ())
     }
 
@@ -199,12 +204,12 @@ impl KvClient {
     /// let resp = KvClient::with_client(&client).do_delete_range("hello").with_prefix().await.unwrap();
     /// # Ok(())
     /// # }
-    pub fn do_delete_range(&mut self, key: impl AsRef<[u8]>) -> DoDeleteRangeRequest {
+    pub fn do_delete_range(&mut self, key: impl Into<Vec<u8>>) -> DoDeleteRangeRequest {
         DoDeleteRangeRequest::new(key, self)
     }
 
     /// Delete a key-value paire
-    pub async fn delete(&mut self, key: impl AsRef<[u8]>) -> Result<()> {
+    pub async fn delete(&mut self, key: impl Into<Vec<u8>>) -> Result<()> {
         self.do_delete_range(key).await.map(|_| ())
     }
 
@@ -224,16 +229,16 @@ impl KvClient {
 }
 
 impl pb::RangeRequest {
-    pub fn new(key: impl AsRef<[u8]>) -> Self {
+    pub fn new(key: impl Into<Vec<u8>>) -> Self {
         pb::RangeRequest {
-            key: key.as_ref().to_vec(),
+            key: key.into(),
             ..Default::default()
         }
     }
 }
 
 impl<'a> DoRangeRequest<'a> {
-    pub fn new(key: impl AsRef<[u8]>, client: &'a mut KvClient) -> Self {
+    pub fn new(key: impl Into<Vec<u8>>, client: &'a mut KvClient) -> Self {
         DoRangeRequest {
             request: pb::RangeRequest::new(key),
             client,
@@ -248,17 +253,21 @@ impl<'a> DoRangeRequest<'a> {
 }
 
 impl pb::PutRequest {
-    pub fn new(key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> Self {
+    pub fn new(key: impl Into<Vec<u8>>, value: impl Into<Vec<u8>>) -> Self {
         pb::PutRequest {
-            key: key.as_ref().to_vec(),
-            value: value.as_ref().to_vec(),
+            key: key.into(),
+            value: value.into(),
             ..Default::default()
         }
     }
 }
 
 impl<'a> DoPutRequest<'a> {
-    pub fn new(key: impl AsRef<[u8]>, value: impl AsRef<[u8]>, client: &'a mut KvClient) -> Self {
+    pub fn new(
+        key: impl Into<Vec<u8>>,
+        value: impl Into<Vec<u8>>,
+        client: &'a mut KvClient,
+    ) -> Self {
         DoPutRequest {
             request: pb::PutRequest::new(key, value),
             client,
@@ -267,16 +276,16 @@ impl<'a> DoPutRequest<'a> {
 }
 
 impl pb::DeleteRangeRequest {
-    pub fn new(key: impl AsRef<[u8]>) -> Self {
+    pub fn new(key: impl Into<Vec<u8>>) -> Self {
         pb::DeleteRangeRequest {
-            key: key.as_ref().to_vec(),
+            key: key.into(),
             ..Default::default()
         }
     }
 }
 
 impl<'a> DoDeleteRangeRequest<'a> {
-    pub fn new(key: impl AsRef<[u8]>, client: &'a mut KvClient) -> Self {
+    pub fn new(key: impl Into<Vec<u8>>, client: &'a mut KvClient) -> Self {
         DoDeleteRangeRequest {
             request: pb::DeleteRangeRequest::new(key),
             client,
@@ -292,7 +301,7 @@ impl<'a> DoDeleteRangeRequest<'a> {
 
 impl pb::Compare {
     pub fn new(
-        key: impl AsRef<[u8]>,
+        key: impl Into<Vec<u8>>,
         result: pb::compare::CompareResult,
         target_union: pb::compare::TargetUnion,
     ) -> Self {
@@ -305,7 +314,7 @@ impl pb::Compare {
         };
 
         pb::Compare {
-            key: key.as_ref().to_vec(),
+            key: key.into(),
             result: result.into(),
             target: target.into(),
             target_union: Some(target_union),
@@ -314,8 +323,8 @@ impl pb::Compare {
     }
 
     /// Set key range end.
-    pub fn with_range_end(mut self, end: impl AsRef<[u8]>) -> Self {
-        self.range_end = end.as_ref().to_vec();
+    pub fn with_range_end(mut self, end: impl Into<Vec<u8>>) -> Self {
+        self.range_end = end.into();
         self
     }
 
@@ -433,6 +442,7 @@ pub mod helper {
     use crate::kv::KvClient;
     use crate::pb;
 
+    #[must_use]
     pub struct DoRangeRequest<'a> {
         pub request: pb::RangeRequest,
         pub(crate) client: &'a mut KvClient,
@@ -511,6 +521,7 @@ pub mod helper {
             Box::pin(async move { client.range(request).await })
         }
     }
+    #[must_use]
     pub struct DoPutRequest<'a> {
         pub request: pb::PutRequest,
         pub(crate) client: &'a mut KvClient,
@@ -559,6 +570,7 @@ pub mod helper {
             Box::pin(async move { client.put(request).await })
         }
     }
+    #[must_use]
     pub struct DoDeleteRangeRequest<'a> {
         pub request: pb::DeleteRangeRequest,
         pub(crate) client: &'a mut KvClient,
@@ -597,6 +609,7 @@ pub mod helper {
             Box::pin(async move { client.delete_range(request).await })
         }
     }
+    #[must_use]
     pub struct DoTxnRequest<'a> {
         pub request: pb::TxnRequest,
         pub(crate) client: &'a mut KvClient,
@@ -621,6 +634,7 @@ pub mod helper {
             Box::pin(async move { client.txn(request).await })
         }
     }
+    #[must_use]
     pub struct DoCompactionRequest<'a> {
         pub request: pb::CompactionRequest,
         pub(crate) client: &'a mut KvClient,

@@ -23,18 +23,20 @@ pub struct Client {
 
 impl Client {
     /// Create a new Client
-    pub async fn new(
-        endpoints: Vec<impl AsRef<str>>,
-        credential: Option<(String, String)>,
-    ) -> Result<Self> {
+    pub async fn new<U>(
+        endpoints: impl Into<Vec<U>>,
+        credential: impl Into<Option<(String, String)>>,
+    ) -> Result<Self>
+    where
+        Uri: TryFrom<U>,
+        <Uri as TryFrom<U>>::Error: std::error::Error + std::marker::Send + Sync + 'static,
+    {
         let mut ep_uris = Vec::new();
 
         // check endpoints
-        for ep in &endpoints {
-            let uri: Uri = ep
-                .as_ref()
-                .parse()
-                .map_err(|err| Error::new(ErrKind::Endpoint, err))?;
+        let endpoints = endpoints.into();
+        for ep in endpoints {
+            let uri = Uri::try_from(ep).map_err(|err| Error::new(ErrKind::Endpoint, err))?;
             if uri.scheme().is_none() {
                 return Err(Error::new(ErrKind::Endpoint, "endpoint scheme is empty"));
             }
@@ -42,18 +44,20 @@ impl Client {
         }
 
         // try to get token
-        let token = if let Some((name, password)) = &credential {
-            get_token(&ep_uris, name, password).await?
-        } else {
-            String::new()
+        let credential = credential.into();
+        let token = match &credential {
+            Some((name, password)) => {
+                let token = get_token(&ep_uris, name, password).await?;
+                let token = token
+                    .try_into()
+                    .map_err(|err| Error::new(ErrKind::AuthFailed, err))?;
+                Some(token)
+            }
+            None => None,
         };
 
         let channel = new_channel(ep_uris).await?;
-        let transport = CredentialInterceptor::new(
-            credential.unwrap_or_default(),
-            &token,
-            GrpcClient::new(channel),
-        );
+        let transport = CredentialInterceptor::new(credential, token, GrpcClient::new(channel));
 
         Ok(Client {
             auth: AuthClient::new(transport.clone()),
@@ -66,19 +70,19 @@ impl Client {
 
     /// Get value by key
     #[inline]
-    pub async fn get(&mut self, key: impl AsRef<[u8]>) -> Result<Vec<u8>> {
+    pub async fn get(&mut self, key: impl Into<Vec<u8>>) -> Result<Vec<u8>> {
         self.kv.get(key).await
     }
 
     /// Get string by key
     #[inline]
-    pub async fn get_string(&mut self, key: impl AsRef<[u8]>) -> Result<String> {
+    pub async fn get_string(&mut self, key: impl Into<Vec<u8>>) -> Result<String> {
         self.kv.get_string(key).await
     }
 
     /// Get key-value pairs with prefix
     #[inline]
-    pub async fn get_with_prefix(&mut self, key: impl AsRef<[u8]>) -> Result<Vec<pb::KeyValue>> {
+    pub async fn get_with_prefix(&mut self, key: impl Into<Vec<u8>>) -> Result<Vec<pb::KeyValue>> {
         self.kv.get_with_prefix(key).await
     }
 
@@ -90,24 +94,33 @@ impl Client {
 
     /// Put a key-value pair
     #[inline]
-    pub async fn put(&mut self, key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> Result<()> {
+    pub async fn put(&mut self, key: impl Into<Vec<u8>>, value: impl Into<Vec<u8>>) -> Result<()> {
         self.kv.put_kv(key, value).await
     }
 
     /// Delete a key-value pair
     #[inline]
-    pub async fn delete(&mut self, key: impl AsRef<[u8]>) -> Result<()> {
+    pub async fn delete(&mut self, key: impl Into<Vec<u8>>) -> Result<()> {
         self.kv.delete(key).await
     }
 
     /// Watch a key
-    pub async fn watch(&mut self, key: impl AsRef<[u8]>) -> Result<Watcher> {
+    pub async fn watch(&mut self, key: impl Into<Vec<u8>>) -> Result<Watcher> {
         self.watch.watch_key(key).await
     }
 
     /// Grant a lease
-    pub async fn grant_lease(&mut self, ttl: i64, lease_id: i64) -> Result<pb::LeaseGrantResponse> {
-        self.lease.grant(ttl, lease_id).await
+    pub async fn grant_lease(&mut self, ttl: i64) -> Result<pb::LeaseGrantResponse> {
+        self.lease.grant(ttl).await
+    }
+
+    /// Grant a lease with lease id
+    pub async fn grant_with_lease_id(
+        &mut self,
+        ttl: i64,
+        lease_id: i64,
+    ) -> Result<pb::LeaseGrantResponse> {
+        self.lease.grant_with_lease_id(ttl, lease_id).await
     }
 
     /// Revoke a lease
@@ -168,7 +181,7 @@ async fn get_token(endpoints: &[Uri], name: &str, password: &str) -> Result<Stri
         }
     }
 
-    Err(Error::new(ErrKind::AuthFailed, ""))
+    Err(Error::new(ErrKind::AuthFailed, "all endpoints failed"))
 }
 
 async fn new_channel(endpoints: Vec<Uri>) -> Result<Channel> {

@@ -10,12 +10,12 @@ async fn main() -> Result<(), Error> {
     let world = "world";
 
     let endpoint = "http://localhost:2379";
-    let cred: Option<(String, String)> = None;
+    let cred = None;
 
     let mut client = Client::new(vec![endpoint], cred).await?;
 
     let start = std::time::Instant::now();
-    let lease = client.grant_lease(3, 0).await?;
+    let lease = client.grant_lease(3).await?;
 
     let leases = client.list_leases().await?;
     println!("got all lease: {:?}", leases);
@@ -39,7 +39,7 @@ async fn main() -> Result<(), Error> {
 
     // another case with keep_alive
     let start = std::time::Instant::now();
-    let lease = client.grant_lease(3, 0).await?;
+    let lease = client.grant_lease(3).await?;
 
     client.kv.do_put(key, world).with_lease(lease.id).await?;
 

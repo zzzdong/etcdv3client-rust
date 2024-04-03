@@ -3,7 +3,7 @@ use etcdv3client::{Client, Error};
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let endpoint = "http://localhost:2379";
-    let cred: Option<(String, String)> = None;
+    let cred = None;
     let mut client = Client::new(vec![endpoint], cred).await?;
 
     let key = "/hello";

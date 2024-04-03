@@ -137,7 +137,6 @@ where
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/RoleRevokePermission");
         self.transport.unary(request.into_request(), path).await
     }
-
     pub async fn get_token(
         &mut self,
         name: impl ToString,
@@ -156,7 +155,6 @@ where
 pub struct AuthClient {
     inner: InnerAuthClient<Transport>,
 }
-
 impl AuthClient {
     pub async fn auth_enable(
         &mut self,
@@ -485,6 +483,7 @@ pub mod helper {
     use crate::error::Result;
     use crate::pb;
 
+    #[must_use]
     pub struct DoAuthEnableRequest<'a> {
         pub request: pb::AuthEnableRequest,
         pub(crate) client: &'a mut AuthClient,
@@ -511,6 +510,7 @@ pub mod helper {
             Box::pin(async move { client.auth_enable(request).await })
         }
     }
+    #[must_use]
     pub struct DoAuthDisableRequest<'a> {
         pub request: pb::AuthDisableRequest,
         pub(crate) client: &'a mut AuthClient,
@@ -537,6 +537,7 @@ pub mod helper {
             Box::pin(async move { client.auth_disable(request).await })
         }
     }
+    #[must_use]
     pub struct DoAuthStatusRequest<'a> {
         pub request: pb::AuthStatusRequest,
         pub(crate) client: &'a mut AuthClient,
@@ -563,6 +564,7 @@ pub mod helper {
             Box::pin(async move { client.auth_status(request).await })
         }
     }
+    #[must_use]
     pub struct DoAuthenticateRequest<'a> {
         pub request: pb::AuthenticateRequest,
         pub(crate) client: &'a mut AuthClient,
@@ -597,6 +599,7 @@ pub mod helper {
             Box::pin(async move { client.authenticate(request).await })
         }
     }
+    #[must_use]
     pub struct DoAuthUserAddRequest<'a> {
         pub request: pb::AuthUserAddRequest,
         pub(crate) client: &'a mut AuthClient,
@@ -635,6 +638,7 @@ pub mod helper {
             Box::pin(async move { client.user_add(request).await })
         }
     }
+    #[must_use]
     pub struct DoAuthUserGetRequest<'a> {
         pub request: pb::AuthUserGetRequest,
         pub(crate) client: &'a mut AuthClient,
@@ -665,6 +669,7 @@ pub mod helper {
             Box::pin(async move { client.user_get(request).await })
         }
     }
+    #[must_use]
     pub struct DoAuthUserListRequest<'a> {
         pub request: pb::AuthUserListRequest,
         pub(crate) client: &'a mut AuthClient,
@@ -691,6 +696,7 @@ pub mod helper {
             Box::pin(async move { client.user_list(request).await })
         }
     }
+    #[must_use]
     pub struct DoAuthUserDeleteRequest<'a> {
         pub request: pb::AuthUserDeleteRequest,
         pub(crate) client: &'a mut AuthClient,
@@ -721,6 +727,7 @@ pub mod helper {
             Box::pin(async move { client.user_delete(request).await })
         }
     }
+    #[must_use]
     pub struct DoAuthUserChangePasswordRequest<'a> {
         pub request: pb::AuthUserChangePasswordRequest,
         pub(crate) client: &'a mut AuthClient,
@@ -760,6 +767,7 @@ pub mod helper {
             Box::pin(async move { client.user_change_password(request).await })
         }
     }
+    #[must_use]
     pub struct DoAuthUserGrantRoleRequest<'a> {
         pub request: pb::AuthUserGrantRoleRequest,
         pub(crate) client: &'a mut AuthClient,
@@ -795,6 +803,7 @@ pub mod helper {
             Box::pin(async move { client.user_grant_role(request).await })
         }
     }
+    #[must_use]
     pub struct DoAuthUserRevokeRoleRequest<'a> {
         pub request: pb::AuthUserRevokeRoleRequest,
         pub(crate) client: &'a mut AuthClient,
@@ -830,6 +839,7 @@ pub mod helper {
             Box::pin(async move { client.user_revoke_role(request).await })
         }
     }
+    #[must_use]
     pub struct DoAuthRoleAddRequest<'a> {
         pub request: pb::AuthRoleAddRequest,
         pub(crate) client: &'a mut AuthClient,
@@ -860,6 +870,7 @@ pub mod helper {
             Box::pin(async move { client.role_add(request).await })
         }
     }
+    #[must_use]
     pub struct DoAuthRoleGetRequest<'a> {
         pub request: pb::AuthRoleGetRequest,
         pub(crate) client: &'a mut AuthClient,
@@ -890,6 +901,7 @@ pub mod helper {
             Box::pin(async move { client.role_get(request).await })
         }
     }
+    #[must_use]
     pub struct DoAuthRoleListRequest<'a> {
         pub request: pb::AuthRoleListRequest,
         pub(crate) client: &'a mut AuthClient,
@@ -916,6 +928,7 @@ pub mod helper {
             Box::pin(async move { client.role_list(request).await })
         }
     }
+    #[must_use]
     pub struct DoAuthRoleDeleteRequest<'a> {
         pub request: pb::AuthRoleDeleteRequest,
         pub(crate) client: &'a mut AuthClient,
@@ -946,6 +959,7 @@ pub mod helper {
             Box::pin(async move { client.role_delete(request).await })
         }
     }
+    #[must_use]
     pub struct DoAuthRoleGrantPermissionRequest<'a> {
         pub request: pb::AuthRoleGrantPermissionRequest,
         pub(crate) client: &'a mut AuthClient,
@@ -977,6 +991,7 @@ pub mod helper {
             Box::pin(async move { client.role_grant_permission(request).await })
         }
     }
+    #[must_use]
     pub struct DoAuthRoleRevokePermissionRequest<'a> {
         pub request: pb::AuthRoleRevokePermissionRequest,
         pub(crate) client: &'a mut AuthClient,

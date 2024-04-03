@@ -4,12 +4,12 @@ use etcdv3client::{pb::RangeRequest, Client, Error};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let key = "hello";
+    let key = "/hello";
     let value = "world";
     let mut origin: Option<Vec<u8>> = None;
 
     let endpoint = "http://localhost:2379";
-    let cred: Option<(String, String)> = None;
+    let cred = None;
 
     let mut client = Client::new(vec![endpoint], cred).await?;
 
@@ -42,7 +42,7 @@ async fn main() -> Result<(), Error> {
     let mut watcher = client.watch(key).await?;
 
     // use middle level api.
-    client.kv.do_put(key, &value).await?;
+    client.kv.do_put(key, value).await?;
 
     // read the watch event
     let mut n: i32 = 0;
@@ -55,8 +55,8 @@ async fn main() -> Result<(), Error> {
         }
 
         let v = format!("{}-{}", value, n);
-        client.put(key, &v).await?;
-        println!("put value: {}", v);
+        client.put(key, v.clone()).await?;
+        println!("put value done: {}", v);
 
         if n > 1 {
             watcher.cancel().await?;
@@ -68,7 +68,7 @@ async fn main() -> Result<(), Error> {
 
     // restore etcd status
     match origin {
-        Some(ref orig) => {
+        Some(orig) => {
             client.put(key, orig).await?;
         }
         None => {

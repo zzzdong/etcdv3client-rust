@@ -17,9 +17,9 @@ async fn main() -> Result<(), Error> {
 
         let key = "/hello";
         // use convenience api under Client.
-        match client.get(key).await {
+        match client.get_string(key).await {
             Ok(v) => {
-                println!("got `{}` => {:?}", key, String::from_utf8_lossy(&v));
+                println!("got `{}` => {:?}", key, v);
             }
             Err(e) if e.is_key_not_found() => {
                 println!("can not find `{}`", key);

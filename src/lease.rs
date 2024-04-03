@@ -134,15 +134,28 @@ impl LeaseClient {
         DoLeaseGrantRequest::new(ttl, self)
     }
 
-    pub async fn grant(&mut self, ttl: i64, lease_id: i64) -> Result<pb::LeaseGrantResponse> {
+    /// Grant a lease with the given ttl.
+    pub async fn grant(&mut self, ttl: i64) -> Result<pb::LeaseGrantResponse> {
+        self.do_grant(ttl).await
+    }
+
+    /// Grant a lease with the given ttl and lease id.
+    pub async fn grant_with_lease_id(
+        &mut self,
+        ttl: i64,
+        lease_id: i64,
+    ) -> Result<pb::LeaseGrantResponse> {
         self.do_grant(ttl).with_lease_id(lease_id).await
     }
 
+    /// Revoke the given lease.
     pub async fn revoke(&mut self, lease_id: i64) -> Result<()> {
         let request = pb::LeaseRevokeRequest::new(lease_id);
         self.lease_revoke(request).await.map(|_| ())
     }
 
+    /// Keep the lease alive.
+    #[must_use]
     pub fn do_keep_alive(&mut self, lease_id: i64) -> DoLeaseKeepAlive {
         DoLeaseKeepAlive::new(lease_id, self)
     }
@@ -309,6 +322,7 @@ pub mod helper {
     use crate::lease::LeaseClient;
     use crate::pb;
 
+    #[must_use]
     pub struct DoLeaseGrantRequest<'a> {
         pub request: pb::LeaseGrantRequest,
         pub(crate) client: &'a mut LeaseClient,
@@ -343,6 +357,7 @@ pub mod helper {
             Box::pin(async move { client.lease_grant(request).await })
         }
     }
+    #[must_use]
     pub struct DoLeaseRevokeRequest<'a> {
         pub request: pb::LeaseRevokeRequest,
         pub(crate) client: &'a mut LeaseClient,
@@ -373,6 +388,7 @@ pub mod helper {
             Box::pin(async move { client.lease_revoke(request).await })
         }
     }
+    #[must_use]
     pub struct DoLeaseTimeToLiveRequest<'a> {
         pub request: pb::LeaseTimeToLiveRequest,
         pub(crate) client: &'a mut LeaseClient,
@@ -407,6 +423,7 @@ pub mod helper {
             Box::pin(async move { client.lease_time_to_live(request).await })
         }
     }
+    #[must_use]
     pub struct DoLeaseLeasesRequest<'a> {
         pub request: pb::LeaseLeasesRequest,
         pub(crate) client: &'a mut LeaseClient,
