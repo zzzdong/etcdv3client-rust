@@ -204,7 +204,7 @@ impl GrpcService for GrpcClient {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct CredentialInterceptor<C> {
+pub struct CredentialInterceptor<C> {
     credential: Option<(String, String)>,
     token: Option<AsciiMetadataValue>,
     inner: C,

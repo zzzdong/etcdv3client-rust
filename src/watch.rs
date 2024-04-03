@@ -35,13 +35,14 @@ where
             .await
     }
 }
-
 #[derive(Debug, Clone)]
-pub struct WatchClient {
-    inner: InnerWatchClient<Transport>,
+pub struct WatchClient<S> {
+    inner: InnerWatchClient<S>,
 }
-
-impl WatchClient {
+impl<S> WatchClient<S>
+where
+    S: GrpcService,
+{
     pub async fn watch(
         &mut self,
         request: impl tonic::IntoStreamingRequest<Message = pb::WatchRequest>,
@@ -53,15 +54,14 @@ impl WatchClient {
     }
 }
 
-impl WatchClient {
-    pub(crate) fn new(transport: Transport) -> Self {
+impl<S> WatchClient<S>
+where
+    S: GrpcService + Send,
+{
+    pub fn new(transport: S) -> Self {
         WatchClient {
             inner: InnerWatchClient::new(transport),
         }
-    }
-
-    pub fn with_client(client: &Client) -> Self {
-        Self::new(client.transport.clone())
     }
 
     /// do watch
@@ -74,7 +74,7 @@ impl WatchClient {
     /// let resp = WatchClient::with_client(&client).do_watch("hello").with_prefix().await.unwrap();
     /// # Ok(())
     /// # }
-    pub fn do_watch(&mut self, key: impl Into<Vec<u8>>) -> DoCreateWatch {
+    pub fn do_watch(&mut self, key: impl Into<Vec<u8>>) -> DoCreateWatch<S> {
         DoCreateWatch::new(key, self)
     }
 
@@ -89,13 +89,16 @@ impl WatchClient {
     }
 }
 
-pub struct DoCreateWatch<'a> {
+pub struct DoCreateWatch<'a, S> {
     pub request: pb::WatchCreateRequest,
-    client: &'a mut WatchClient,
+    client: &'a mut WatchClient<S>,
 }
 
-impl<'a> DoCreateWatch<'a> {
-    pub fn new(key: impl Into<Vec<u8>>, client: &'a mut WatchClient) -> Self {
+impl<'a, S> DoCreateWatch<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn new(key: impl Into<Vec<u8>>, client: &'a mut WatchClient<S>) -> Self {
         DoCreateWatch {
             request: pb::WatchCreateRequest::new(key),
             client,
@@ -148,7 +151,7 @@ impl<'a> DoCreateWatch<'a> {
     }
 }
 
-impl<'a> fmt::Debug for DoCreateWatch<'a> {
+impl<'a, S> fmt::Debug for DoCreateWatch<'a, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DoCreateWatch")
             .field("request", &self.request)
@@ -156,9 +159,12 @@ impl<'a> fmt::Debug for DoCreateWatch<'a> {
     }
 }
 
-impl<'a> IntoFuture for DoCreateWatch<'a> {
+impl<'a, S> IntoFuture for DoCreateWatch<'a, S>
+where
+    S: GrpcService
+{
     type Output = Result<Watcher>;
-    type IntoFuture = Pin<Box<dyn Future<Output = Result<Watcher>> + Send + 'a>>;
+    type IntoFuture = Pin<Box<dyn Future<Output = Result<Watcher>> + 'a>>;
 
     fn into_future(self) -> Self::IntoFuture {
         Box::pin(self.send())

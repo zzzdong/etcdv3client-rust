@@ -1,27 +1,29 @@
 use crate::error::{ErrKind, Error, Result};
 use crate::pb;
-use crate::transport::CredentialInterceptor;
+use crate::transport::{CredentialInterceptor, GrpcService};
 
 use crate::auth::{AuthClient, InnerAuthClient};
 use crate::kv::KvClient;
 use crate::lease::{LeaseClient, LeaseKeepAliver};
-use crate::transport::{GrpcClient, Transport};
+use crate::transport::GrpcClient;
 use crate::watch::{WatchClient, Watcher};
 
 use http::Uri;
 use tonic::transport::{channel::Channel, Endpoint};
 
-#[derive(Debug, Clone)]
-pub struct Client {
-    pub kv: KvClient,
-    pub auth: AuthClient,
-    pub watch: WatchClient,
-    pub lease: LeaseClient,
+pub type SimpleClient = Client<CredentialInterceptor<GrpcClient>>;
 
-    pub(crate) transport: Transport,
+#[derive(Debug, Clone)]
+pub struct Client<S> {
+    pub kv: KvClient<S>,
+    pub auth: AuthClient<S>,
+    pub watch: WatchClient<S>,
+    pub lease: LeaseClient<S>,
+
+    pub(crate) service: S,
 }
 
-impl Client {
+impl SimpleClient {
     /// Create a new Client
     pub async fn new<U>(
         endpoints: impl Into<Vec<U>>,
@@ -57,15 +59,31 @@ impl Client {
         };
 
         let channel = new_channel(ep_uris).await?;
-        let transport = CredentialInterceptor::new(credential, token, GrpcClient::new(channel));
+        let service = CredentialInterceptor::new(credential, token, GrpcClient::new(channel));
 
         Ok(Client {
+            auth: AuthClient::new(service.clone()),
+            kv: KvClient::new(service.clone()),
+            watch: WatchClient::new(service.clone()),
+            lease: LeaseClient::new(service.clone()),
+            service,
+        })
+    }
+}
+
+impl<S: GrpcService + Send + Clone> Client<S> {
+    pub fn service(&self) -> S {
+        self.service.clone()
+    }
+
+    pub fn with_service(transport: S) -> Self {
+        Client {
             auth: AuthClient::new(transport.clone()),
             kv: KvClient::new(transport.clone()),
             watch: WatchClient::new(transport.clone()),
             lease: LeaseClient::new(transport.clone()),
-            transport,
-        })
+            service: transport,
+        }
     }
 
     /// Get value by key

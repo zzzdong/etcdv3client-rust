@@ -32,7 +32,7 @@
 mod client;
 mod error;
 pub mod pb;
-mod transport;
+pub mod transport;
 mod utils;
 
 mod auth;
@@ -40,7 +40,7 @@ mod kv;
 mod lease;
 mod watch;
 
-pub use client::Client;
+pub use client::{Client, SimpleClient};
 pub use error::{ErrKind, Error};
 pub use kv::KvClient;
 pub use lease::{LeaseClient, LeaseKeepAliver};

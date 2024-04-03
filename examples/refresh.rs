@@ -1,4 +1,4 @@
-use etcdv3client::{Client, Error, WatchClient};
+use etcdv3client::{transport::GrpcService, Client, Error, SimpleClient, WatchClient};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -40,9 +40,8 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-async fn watch(client: Client, id: u64) {
-    let mut watch_client = WatchClient::with_client(&client);
-
+async fn watch(client: SimpleClient, id: u64) {
+    let mut watch_client = WatchClient::new(client.service());
     match watch_client.watch_prefix("/").await {
         Ok(mut watcher) => {
             println!("[{}] etcd created wather.", id);

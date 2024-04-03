@@ -1,10 +1,7 @@
 use crate::error::Result;
 use crate::pb::{self};
 use crate::transport::GrpcService;
-use crate::transport::Transport;
-use crate::Client;
 
-use helper::*;
 use tonic::IntoRequest;
 
 #[derive(Debug, Clone)]
@@ -137,6 +134,7 @@ where
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/RoleRevokePermission");
         self.transport.unary(request.into_request(), path).await
     }
+
     pub async fn get_token(
         &mut self,
         name: impl ToString,
@@ -150,12 +148,14 @@ where
         .map(|resp| resp.into_inner().token)
     }
 }
-
 #[derive(Debug, Clone)]
-pub struct AuthClient {
-    inner: InnerAuthClient<Transport>,
+pub struct AuthClient<S> {
+    inner: InnerAuthClient<S>,
 }
-impl AuthClient {
+impl<S> AuthClient<S>
+where
+    S: GrpcService,
+{
     pub async fn auth_enable(
         &mut self,
         request: pb::AuthEnableRequest,
@@ -311,27 +311,26 @@ impl AuthClient {
     }
 }
 
-impl AuthClient {
-    pub(crate) fn new(transport: Transport) -> Self {
+impl<S> AuthClient<S>
+where
+    S: GrpcService,
+{
+    pub(crate) fn new(transport: S) -> Self {
         AuthClient {
             inner: InnerAuthClient::new(transport),
         }
     }
 
-    pub fn with_client(client: &Client) -> Self {
-        Self::new(client.transport.clone())
-    }
-
-    pub fn do_auth_enable(&mut self) -> DoAuthEnableRequest {
-        DoAuthEnableRequest::new(self)
+    pub fn do_auth_enable(&mut self) -> DoAuthEnableRequest<S> {
+        pb::AuthEnableRequest::default().build(self)
     }
 
     pub async fn enable_auth(&mut self) -> Result<()> {
         self.do_auth_enable().await.map(|_| ())
     }
 
-    pub fn do_auth_disable(&mut self) -> DoAuthDisableRequest {
-        DoAuthDisableRequest::new(self)
+    pub fn do_auth_disable(&mut self) -> DoAuthDisableRequest<S> {
+        pb::AuthDisableRequest::default().build(self)
     }
 
     pub async fn disable_auth(&mut self) -> Result<()> {
@@ -340,16 +339,16 @@ impl AuthClient {
 
     pub fn do_authenticate(
         &mut self,
-        name: impl AsRef<str>,
-        password: impl AsRef<str>,
-    ) -> DoAuthenticateRequest {
-        DoAuthenticateRequest::new(name, password, self)
+        name: impl Into<String>,
+        password: impl Into<String>,
+    ) -> DoAuthenticateRequest<'_, S> {
+        pb::AuthenticateRequest::new(name.into(), password.into()).build(self)
     }
 
     pub async fn get_token(
         &mut self,
-        name: impl AsRef<str>,
-        password: impl AsRef<str>,
+        name: impl Into<String>,
+        password: impl Into<String>,
     ) -> Result<String> {
         let resp = self.do_authenticate(name, password).await?;
         Ok(resp.token)
@@ -357,678 +356,795 @@ impl AuthClient {
 
     pub fn do_user_add(
         &mut self,
-        name: impl AsRef<str>,
-        password: impl AsRef<str>,
-    ) -> DoAuthUserAddRequest {
-        DoAuthUserAddRequest::new(name, password, "", self)
+        name: impl Into<String>,
+        password: impl Into<String>,
+    ) -> DoAuthUserAddRequest<'_, S> {
+        pb::AuthUserAddRequest::new(name.into(), password.into()).build(self)
     }
 
     pub async fn add_user(
         &mut self,
-        name: impl AsRef<str>,
-        password: impl AsRef<str>,
+        name: impl Into<String>,
+        password: impl Into<String>,
     ) -> Result<()> {
         let _resp = self.do_user_add(name, password).await?;
         Ok(())
     }
 
-    pub fn do_user_get(&mut self, name: impl AsRef<str>) -> DoAuthUserGetRequest {
-        DoAuthUserGetRequest::new(name, self)
+    pub fn do_user_get(&mut self, name: impl Into<String>) -> DoAuthUserGetRequest<S> {
+        pb::AuthUserGetRequest::new(name.into()).build(self)
     }
 
-    pub async fn get_user(&mut self, name: impl AsRef<str>) -> Result<pb::AuthUserGetResponse> {
+    pub async fn get_user(&mut self, name: impl Into<String>) -> Result<pb::AuthUserGetResponse> {
         self.do_user_get(name).await
     }
 }
 
-impl<'a> DoAuthEnableRequest<'a> {
-    pub fn new(client: &'a mut AuthClient) -> Self {
+impl pb::AuthEnableRequest {
+    pub fn build<'a, S: GrpcService>(
+        self,
+        client: &'a mut AuthClient<S>,
+    ) -> DoAuthEnableRequest<'a, S> {
         DoAuthEnableRequest {
-            request: Default::default(),
+            request: self,
             client,
         }
     }
 }
-
-impl<'a> DoAuthDisableRequest<'a> {
-    pub fn new(client: &'a mut AuthClient) -> Self {
-        DoAuthDisableRequest {
-            request: Default::default(),
-            client,
-        }
-    }
+#[must_use]
+pub struct DoAuthEnableRequest<'a, S> {
+    pub request: pb::AuthEnableRequest,
+    pub(crate) client: &'a mut AuthClient<S>,
 }
-
-impl pb::AuthenticateRequest {
-    pub fn new(name: impl AsRef<str>, password: impl AsRef<str>) -> Self {
-        pb::AuthenticateRequest {
-            name: name.as_ref().to_string(),
-            password: password.as_ref().to_string(),
-        }
-    }
-}
-
-impl<'a> DoAuthenticateRequest<'a> {
-    pub fn new(
-        name: impl AsRef<str>,
-        password: impl AsRef<str>,
-        client: &'a mut AuthClient,
-    ) -> Self {
-        DoAuthenticateRequest {
-            request: pb::AuthenticateRequest::new(name, password),
-            client,
-        }
-    }
-}
-
-impl pb::AuthUserAddRequest {
-    pub fn new(
-        name: impl AsRef<str>,
-        password: impl AsRef<str>,
-        hashed_password: impl AsRef<str>,
-    ) -> Self {
-        pb::AuthUserAddRequest {
-            name: name.as_ref().to_string(),
-            password: password.as_ref().to_string(),
-            hashed_password: hashed_password.as_ref().to_string(),
-            options: None,
-        }
-    }
-
-    pub fn set_no_password(&mut self) {
-        self.options = Some(pb::UserAddOptions { no_password: true });
-    }
-}
-
-impl<'a> DoAuthUserAddRequest<'a> {
-    pub fn new(
-        name: impl AsRef<str>,
-        password: impl AsRef<str>,
-        hashed_password: impl AsRef<str>,
-        client: &'a mut AuthClient,
-    ) -> Self {
-        DoAuthUserAddRequest {
-            request: pb::AuthUserAddRequest::new(name, password, hashed_password),
-            client,
-        }
-    }
-
-    pub fn without_password(mut self) -> Self {
-        self.request.set_no_password();
+impl<'a, S> DoAuthEnableRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut AuthClient<S>) -> Self {
+        self.client = client;
         self
     }
 }
-
-impl pb::AuthUserGetRequest {
-    pub fn new(name: impl AsRef<str>) -> Self {
-        pb::AuthUserGetRequest {
-            name: name.as_ref().to_string(),
-        }
+impl<'a, S> std::future::IntoFuture for DoAuthEnableRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::AuthEnableResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthEnableResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoAuthEnableRequest { request, client } = self;
+        Box::pin(async move { client.auth_enable(request).await })
     }
 }
-
-impl<'a> DoAuthUserGetRequest<'a> {
-    pub fn new(name: impl AsRef<str>, client: &'a mut AuthClient) -> Self {
-        DoAuthUserGetRequest {
-            request: pb::AuthUserGetRequest::new(name),
+impl pb::AuthDisableRequest {
+    pub fn build<'a, S: GrpcService>(
+        self,
+        client: &'a mut AuthClient<S>,
+    ) -> DoAuthDisableRequest<'a, S> {
+        DoAuthDisableRequest {
+            request: self,
             client,
         }
     }
 }
+#[must_use]
+pub struct DoAuthDisableRequest<'a, S> {
+    pub request: pb::AuthDisableRequest,
+    pub(crate) client: &'a mut AuthClient<S>,
+}
+impl<'a, S> DoAuthDisableRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut AuthClient<S>) -> Self {
+        self.client = client;
+        self
+    }
+}
+impl<'a, S> std::future::IntoFuture for DoAuthDisableRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::AuthDisableResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthDisableResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoAuthDisableRequest { request, client } = self;
+        Box::pin(async move { client.auth_disable(request).await })
+    }
+}
+impl pb::AuthStatusRequest {
+    pub fn build<'a, S: GrpcService>(
+        self,
+        client: &'a mut AuthClient<S>,
+    ) -> DoAuthStatusRequest<'a, S> {
+        DoAuthStatusRequest {
+            request: self,
+            client,
+        }
+    }
+}
+#[must_use]
+pub struct DoAuthStatusRequest<'a, S> {
+    pub request: pb::AuthStatusRequest,
+    pub(crate) client: &'a mut AuthClient<S>,
+}
+impl<'a, S> DoAuthStatusRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut AuthClient<S>) -> Self {
+        self.client = client;
+        self
+    }
+}
+impl<'a, S> std::future::IntoFuture for DoAuthStatusRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::AuthStatusResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthStatusResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoAuthStatusRequest { request, client } = self;
+        Box::pin(async move { client.auth_status(request).await })
+    }
+}
+impl pb::AuthenticateRequest {
+    pub fn new(name: String, password: String) -> Self {
+        Self { name, password }
+    }
 
-pub mod helper {
-    #![allow(dead_code)]
+    pub fn build<'a, S: GrpcService>(
+        self,
+        client: &'a mut AuthClient<S>,
+    ) -> DoAuthenticateRequest<'a, S> {
+        DoAuthenticateRequest {
+            request: self,
+            client,
+        }
+    }
+}
+#[must_use]
+pub struct DoAuthenticateRequest<'a, S> {
+    pub request: pb::AuthenticateRequest,
+    pub(crate) client: &'a mut AuthClient<S>,
+}
+impl<'a, S> DoAuthenticateRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut AuthClient<S>) -> Self {
+        self.client = client;
+        self
+    }
+    pub fn with_name(mut self, name: String) -> Self {
+        self.request.name = name;
+        self
+    }
+    pub fn with_password(mut self, password: String) -> Self {
+        self.request.password = password;
+        self
+    }
+}
+impl<'a, S> std::future::IntoFuture for DoAuthenticateRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::AuthenticateResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthenticateResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoAuthenticateRequest { request, client } = self;
+        Box::pin(async move { client.authenticate(request).await })
+    }
+}
+impl pb::AuthUserAddRequest {
+    pub fn new(name: String, password: String) -> Self {
+        Self {
+            name,
+            password,
+            ..Default::default()
+        }
+    }
 
-    use crate::auth::AuthClient;
-    use crate::error::Result;
-    use crate::pb;
+    pub fn build<'a, S: GrpcService>(
+        self,
+        client: &'a mut AuthClient<S>,
+    ) -> DoAuthUserAddRequest<'a, S> {
+        DoAuthUserAddRequest {
+            request: self,
+            client,
+        }
+    }
+}
+#[must_use]
+pub struct DoAuthUserAddRequest<'a, S> {
+    pub request: pb::AuthUserAddRequest,
+    pub(crate) client: &'a mut AuthClient<S>,
+}
+impl<'a, S> DoAuthUserAddRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut AuthClient<S>) -> Self {
+        self.client = client;
+        self
+    }
+    pub fn with_name(mut self, name: String) -> Self {
+        self.request.name = name;
+        self
+    }
+    pub fn with_password(mut self, password: String) -> Self {
+        self.request.password = password;
+        self
+    }
+    pub fn with_hashed_password(mut self, hashed_password: String) -> Self {
+        self.request.hashed_password = hashed_password;
+        self
+    }
+}
+impl<'a, S> std::future::IntoFuture for DoAuthUserAddRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::AuthUserAddResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthUserAddResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoAuthUserAddRequest { request, client } = self;
+        Box::pin(async move { client.user_add(request).await })
+    }
+}
+impl pb::AuthUserGetRequest {
+    pub fn new(name: String) -> Self {
+        Self { name }
+    }
 
-    #[must_use]
-    pub struct DoAuthEnableRequest<'a> {
-        pub request: pb::AuthEnableRequest,
-        pub(crate) client: &'a mut AuthClient,
-    }
-    impl<'a> DoAuthEnableRequest<'a> {
-        pub fn from_client(client: &'a mut AuthClient) -> Self {
-            DoAuthEnableRequest {
-                request: Default::default(),
-                client,
-            }
+    pub fn build<'a, S: GrpcService>(
+        self,
+        client: &'a mut AuthClient<S>,
+    ) -> DoAuthUserGetRequest<'a, S> {
+        DoAuthUserGetRequest {
+            request: self,
+            client,
         }
     }
-    impl<'a> std::future::IntoFuture for DoAuthEnableRequest<'a> {
-        type Output = Result<pb::AuthEnableResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::AuthEnableResponse>>
-                    + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoAuthEnableRequest { request, client } = self;
-            Box::pin(async move { client.auth_enable(request).await })
+}
+#[must_use]
+pub struct DoAuthUserGetRequest<'a, S> {
+    pub request: pb::AuthUserGetRequest,
+    pub(crate) client: &'a mut AuthClient<S>,
+}
+impl<'a, S> DoAuthUserGetRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut AuthClient<S>) -> Self {
+        self.client = client;
+        self
+    }
+    pub fn with_name(mut self, name: String) -> Self {
+        self.request.name = name;
+        self
+    }
+}
+impl<'a, S> std::future::IntoFuture for DoAuthUserGetRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::AuthUserGetResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthUserGetResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoAuthUserGetRequest { request, client } = self;
+        Box::pin(async move { client.user_get(request).await })
+    }
+}
+impl pb::AuthUserListRequest {
+    pub fn build<'a, S: GrpcService>(
+        self,
+        client: &'a mut AuthClient<S>,
+    ) -> DoAuthUserListRequest<'a, S> {
+        DoAuthUserListRequest {
+            request: self,
+            client,
         }
     }
-    #[must_use]
-    pub struct DoAuthDisableRequest<'a> {
-        pub request: pb::AuthDisableRequest,
-        pub(crate) client: &'a mut AuthClient,
+}
+#[must_use]
+pub struct DoAuthUserListRequest<'a, S> {
+    pub request: pb::AuthUserListRequest,
+    pub(crate) client: &'a mut AuthClient<S>,
+}
+impl<'a, S> DoAuthUserListRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut AuthClient<S>) -> Self {
+        self.client = client;
+        self
     }
-    impl<'a> DoAuthDisableRequest<'a> {
-        pub fn from_client(client: &'a mut AuthClient) -> Self {
-            DoAuthDisableRequest {
-                request: Default::default(),
-                client,
-            }
-        }
+}
+impl<'a, S> std::future::IntoFuture for DoAuthUserListRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::AuthUserListResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthUserListResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoAuthUserListRequest { request, client } = self;
+        Box::pin(async move { client.user_list(request).await })
     }
-    impl<'a> std::future::IntoFuture for DoAuthDisableRequest<'a> {
-        type Output = Result<pb::AuthDisableResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::AuthDisableResponse>>
-                    + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoAuthDisableRequest { request, client } = self;
-            Box::pin(async move { client.auth_disable(request).await })
-        }
-    }
-    #[must_use]
-    pub struct DoAuthStatusRequest<'a> {
-        pub request: pb::AuthStatusRequest,
-        pub(crate) client: &'a mut AuthClient,
-    }
-    impl<'a> DoAuthStatusRequest<'a> {
-        pub fn from_client(client: &'a mut AuthClient) -> Self {
-            DoAuthStatusRequest {
-                request: Default::default(),
-                client,
-            }
+}
+impl pb::AuthUserDeleteRequest {
+    pub fn build<'a, S: GrpcService>(
+        self,
+        client: &'a mut AuthClient<S>,
+    ) -> DoAuthUserDeleteRequest<'a, S> {
+        DoAuthUserDeleteRequest {
+            request: self,
+            client,
         }
     }
-    impl<'a> std::future::IntoFuture for DoAuthStatusRequest<'a> {
-        type Output = Result<pb::AuthStatusResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::AuthStatusResponse>>
-                    + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoAuthStatusRequest { request, client } = self;
-            Box::pin(async move { client.auth_status(request).await })
+}
+#[must_use]
+pub struct DoAuthUserDeleteRequest<'a, S> {
+    pub request: pb::AuthUserDeleteRequest,
+    pub(crate) client: &'a mut AuthClient<S>,
+}
+impl<'a, S> DoAuthUserDeleteRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut AuthClient<S>) -> Self {
+        self.client = client;
+        self
+    }
+    pub fn with_name(mut self, name: String) -> Self {
+        self.request.name = name;
+        self
+    }
+}
+impl<'a, S> std::future::IntoFuture for DoAuthUserDeleteRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::AuthUserDeleteResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::AuthUserDeleteResponse>> + 'a,
+        >,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoAuthUserDeleteRequest { request, client } = self;
+        Box::pin(async move { client.user_delete(request).await })
+    }
+}
+impl pb::AuthUserChangePasswordRequest {
+    pub fn build<'a, S: GrpcService>(
+        self,
+        client: &'a mut AuthClient<S>,
+    ) -> DoAuthUserChangePasswordRequest<'a, S> {
+        DoAuthUserChangePasswordRequest {
+            request: self,
+            client,
         }
     }
-    #[must_use]
-    pub struct DoAuthenticateRequest<'a> {
-        pub request: pb::AuthenticateRequest,
-        pub(crate) client: &'a mut AuthClient,
+}
+#[must_use]
+pub struct DoAuthUserChangePasswordRequest<'a, S> {
+    pub request: pb::AuthUserChangePasswordRequest,
+    pub(crate) client: &'a mut AuthClient<S>,
+}
+impl<'a, S> DoAuthUserChangePasswordRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut AuthClient<S>) -> Self {
+        self.client = client;
+        self
     }
-    impl<'a> DoAuthenticateRequest<'a> {
-        pub fn from_client(client: &'a mut AuthClient) -> Self {
-            DoAuthenticateRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-        pub fn with_name(mut self, name: String) -> Self {
-            self.request.name = name;
-            self
-        }
-        pub fn with_password(mut self, password: String) -> Self {
-            self.request.password = password;
-            self
-        }
+    pub fn with_name(mut self, name: String) -> Self {
+        self.request.name = name;
+        self
     }
-    impl<'a> std::future::IntoFuture for DoAuthenticateRequest<'a> {
-        type Output = Result<pb::AuthenticateResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::AuthenticateResponse>>
-                    + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoAuthenticateRequest { request, client } = self;
-            Box::pin(async move { client.authenticate(request).await })
-        }
+    pub fn with_password(mut self, password: String) -> Self {
+        self.request.password = password;
+        self
     }
-    #[must_use]
-    pub struct DoAuthUserAddRequest<'a> {
-        pub request: pb::AuthUserAddRequest,
-        pub(crate) client: &'a mut AuthClient,
+    pub fn with_hashed_password(mut self, hashed_password: String) -> Self {
+        self.request.hashed_password = hashed_password;
+        self
     }
-    impl<'a> DoAuthUserAddRequest<'a> {
-        pub fn from_client(client: &'a mut AuthClient) -> Self {
-            DoAuthUserAddRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-        pub fn with_name(mut self, name: String) -> Self {
-            self.request.name = name;
-            self
-        }
-        pub fn with_password(mut self, password: String) -> Self {
-            self.request.password = password;
-            self
-        }
-        pub fn with_hashed_password(mut self, hashed_password: String) -> Self {
-            self.request.hashed_password = hashed_password;
-            self
+}
+impl<'a, S> std::future::IntoFuture for DoAuthUserChangePasswordRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::AuthUserChangePasswordResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = crate::error::Result<pb::AuthUserChangePasswordResponse>,
+                > + 'a,
+        >,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoAuthUserChangePasswordRequest { request, client } = self;
+        Box::pin(async move { client.user_change_password(request).await })
+    }
+}
+impl pb::AuthUserGrantRoleRequest {
+    pub fn build<'a, S: GrpcService>(
+        self,
+        client: &'a mut AuthClient<S>,
+    ) -> DoAuthUserGrantRoleRequest<'a, S> {
+        DoAuthUserGrantRoleRequest {
+            request: self,
+            client,
         }
     }
-    impl<'a> std::future::IntoFuture for DoAuthUserAddRequest<'a> {
-        type Output = Result<pb::AuthUserAddResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::AuthUserAddResponse>>
-                    + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoAuthUserAddRequest { request, client } = self;
-            Box::pin(async move { client.user_add(request).await })
+}
+#[must_use]
+pub struct DoAuthUserGrantRoleRequest<'a, S> {
+    pub request: pb::AuthUserGrantRoleRequest,
+    pub(crate) client: &'a mut AuthClient<S>,
+}
+impl<'a, S> DoAuthUserGrantRoleRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut AuthClient<S>) -> Self {
+        self.client = client;
+        self
+    }
+    pub fn with_user(mut self, user: String) -> Self {
+        self.request.user = user;
+        self
+    }
+    pub fn with_role(mut self, role: String) -> Self {
+        self.request.role = role;
+        self
+    }
+}
+impl<'a, S> std::future::IntoFuture for DoAuthUserGrantRoleRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::AuthUserGrantRoleResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::AuthUserGrantRoleResponse>>
+                + 'a,
+        >,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoAuthUserGrantRoleRequest { request, client } = self;
+        Box::pin(async move { client.user_grant_role(request).await })
+    }
+}
+impl pb::AuthUserRevokeRoleRequest {
+    pub fn build<'a, S: GrpcService>(
+        self,
+        client: &'a mut AuthClient<S>,
+    ) -> DoAuthUserRevokeRoleRequest<'a, S> {
+        DoAuthUserRevokeRoleRequest {
+            request: self,
+            client,
         }
     }
-    #[must_use]
-    pub struct DoAuthUserGetRequest<'a> {
-        pub request: pb::AuthUserGetRequest,
-        pub(crate) client: &'a mut AuthClient,
+}
+#[must_use]
+pub struct DoAuthUserRevokeRoleRequest<'a, S> {
+    pub request: pb::AuthUserRevokeRoleRequest,
+    pub(crate) client: &'a mut AuthClient<S>,
+}
+impl<'a, S> DoAuthUserRevokeRoleRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut AuthClient<S>) -> Self {
+        self.client = client;
+        self
     }
-    impl<'a> DoAuthUserGetRequest<'a> {
-        pub fn from_client(client: &'a mut AuthClient) -> Self {
-            DoAuthUserGetRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-        pub fn with_name(mut self, name: String) -> Self {
-            self.request.name = name;
-            self
-        }
+    pub fn with_name(mut self, name: String) -> Self {
+        self.request.name = name;
+        self
     }
-    impl<'a> std::future::IntoFuture for DoAuthUserGetRequest<'a> {
-        type Output = Result<pb::AuthUserGetResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::AuthUserGetResponse>>
-                    + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoAuthUserGetRequest { request, client } = self;
-            Box::pin(async move { client.user_get(request).await })
-        }
+    pub fn with_role(mut self, role: String) -> Self {
+        self.request.role = role;
+        self
     }
-    #[must_use]
-    pub struct DoAuthUserListRequest<'a> {
-        pub request: pb::AuthUserListRequest,
-        pub(crate) client: &'a mut AuthClient,
+}
+impl<'a, S> std::future::IntoFuture for DoAuthUserRevokeRoleRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::AuthUserRevokeRoleResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::AuthUserRevokeRoleResponse>>
+                + 'a,
+        >,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoAuthUserRevokeRoleRequest { request, client } = self;
+        Box::pin(async move { client.user_revoke_role(request).await })
     }
-    impl<'a> DoAuthUserListRequest<'a> {
-        pub fn from_client(client: &'a mut AuthClient) -> Self {
-            DoAuthUserListRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-    }
-    impl<'a> std::future::IntoFuture for DoAuthUserListRequest<'a> {
-        type Output = Result<pb::AuthUserListResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::AuthUserListResponse>>
-                    + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoAuthUserListRequest { request, client } = self;
-            Box::pin(async move { client.user_list(request).await })
+}
+impl pb::AuthRoleAddRequest {
+    pub fn build<'a, S: GrpcService>(
+        self,
+        client: &'a mut AuthClient<S>,
+    ) -> DoAuthRoleAddRequest<'a, S> {
+        DoAuthRoleAddRequest {
+            request: self,
+            client,
         }
     }
-    #[must_use]
-    pub struct DoAuthUserDeleteRequest<'a> {
-        pub request: pb::AuthUserDeleteRequest,
-        pub(crate) client: &'a mut AuthClient,
+}
+#[must_use]
+pub struct DoAuthRoleAddRequest<'a, S> {
+    pub request: pb::AuthRoleAddRequest,
+    pub(crate) client: &'a mut AuthClient<S>,
+}
+impl<'a, S> DoAuthRoleAddRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut AuthClient<S>) -> Self {
+        self.client = client;
+        self
     }
-    impl<'a> DoAuthUserDeleteRequest<'a> {
-        pub fn from_client(client: &'a mut AuthClient) -> Self {
-            DoAuthUserDeleteRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-        pub fn with_name(mut self, name: String) -> Self {
-            self.request.name = name;
-            self
-        }
+    pub fn with_name(mut self, name: String) -> Self {
+        self.request.name = name;
+        self
     }
-    impl<'a> std::future::IntoFuture for DoAuthUserDeleteRequest<'a> {
-        type Output = Result<pb::AuthUserDeleteResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::AuthUserDeleteResponse>>
-                    + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoAuthUserDeleteRequest { request, client } = self;
-            Box::pin(async move { client.user_delete(request).await })
-        }
+}
+impl<'a, S> std::future::IntoFuture for DoAuthRoleAddRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::AuthRoleAddResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleAddResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoAuthRoleAddRequest { request, client } = self;
+        Box::pin(async move { client.role_add(request).await })
     }
-    #[must_use]
-    pub struct DoAuthUserChangePasswordRequest<'a> {
-        pub request: pb::AuthUserChangePasswordRequest,
-        pub(crate) client: &'a mut AuthClient,
-    }
-    impl<'a> DoAuthUserChangePasswordRequest<'a> {
-        pub fn from_client(client: &'a mut AuthClient) -> Self {
-            DoAuthUserChangePasswordRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-        pub fn with_name(mut self, name: String) -> Self {
-            self.request.name = name;
-            self
-        }
-        pub fn with_password(mut self, password: String) -> Self {
-            self.request.password = password;
-            self
-        }
-        pub fn with_hashed_password(mut self, hashed_password: String) -> Self {
-            self.request.hashed_password = hashed_password;
-            self
+}
+impl pb::AuthRoleGetRequest {
+    pub fn build<'a, S: GrpcService>(
+        self,
+        client: &'a mut AuthClient<S>,
+    ) -> DoAuthRoleGetRequest<'a, S> {
+        DoAuthRoleGetRequest {
+            request: self,
+            client,
         }
     }
-    impl<'a> std::future::IntoFuture for DoAuthUserChangePasswordRequest<'a> {
-        type Output = Result<pb::AuthUserChangePasswordResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<
-                        Output = crate::error::Result<pb::AuthUserChangePasswordResponse>,
-                    > + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoAuthUserChangePasswordRequest { request, client } = self;
-            Box::pin(async move { client.user_change_password(request).await })
+}
+#[must_use]
+pub struct DoAuthRoleGetRequest<'a, S> {
+    pub request: pb::AuthRoleGetRequest,
+    pub(crate) client: &'a mut AuthClient<S>,
+}
+impl<'a, S> DoAuthRoleGetRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut AuthClient<S>) -> Self {
+        self.client = client;
+        self
+    }
+    pub fn with_role(mut self, role: String) -> Self {
+        self.request.role = role;
+        self
+    }
+}
+impl<'a, S> std::future::IntoFuture for DoAuthRoleGetRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::AuthRoleGetResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleGetResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoAuthRoleGetRequest { request, client } = self;
+        Box::pin(async move { client.role_get(request).await })
+    }
+}
+impl pb::AuthRoleListRequest {
+    pub fn build<'a, S: GrpcService>(
+        self,
+        client: &'a mut AuthClient<S>,
+    ) -> DoAuthRoleListRequest<'a, S> {
+        DoAuthRoleListRequest {
+            request: self,
+            client,
         }
     }
-    #[must_use]
-    pub struct DoAuthUserGrantRoleRequest<'a> {
-        pub request: pb::AuthUserGrantRoleRequest,
-        pub(crate) client: &'a mut AuthClient,
+}
+#[must_use]
+pub struct DoAuthRoleListRequest<'a, S> {
+    pub request: pb::AuthRoleListRequest,
+    pub(crate) client: &'a mut AuthClient<S>,
+}
+impl<'a, S> DoAuthRoleListRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut AuthClient<S>) -> Self {
+        self.client = client;
+        self
     }
-    impl<'a> DoAuthUserGrantRoleRequest<'a> {
-        pub fn from_client(client: &'a mut AuthClient) -> Self {
-            DoAuthUserGrantRoleRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-        pub fn with_user(mut self, user: String) -> Self {
-            self.request.user = user;
-            self
-        }
-        pub fn with_role(mut self, role: String) -> Self {
-            self.request.role = role;
-            self
-        }
+}
+impl<'a, S> std::future::IntoFuture for DoAuthRoleListRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::AuthRoleListResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleListResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoAuthRoleListRequest { request, client } = self;
+        Box::pin(async move { client.role_list(request).await })
     }
-    impl<'a> std::future::IntoFuture for DoAuthUserGrantRoleRequest<'a> {
-        type Output = Result<pb::AuthUserGrantRoleResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<
-                        Output = crate::error::Result<pb::AuthUserGrantRoleResponse>,
-                    > + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoAuthUserGrantRoleRequest { request, client } = self;
-            Box::pin(async move { client.user_grant_role(request).await })
-        }
-    }
-    #[must_use]
-    pub struct DoAuthUserRevokeRoleRequest<'a> {
-        pub request: pb::AuthUserRevokeRoleRequest,
-        pub(crate) client: &'a mut AuthClient,
-    }
-    impl<'a> DoAuthUserRevokeRoleRequest<'a> {
-        pub fn from_client(client: &'a mut AuthClient) -> Self {
-            DoAuthUserRevokeRoleRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-        pub fn with_name(mut self, name: String) -> Self {
-            self.request.name = name;
-            self
-        }
-        pub fn with_role(mut self, role: String) -> Self {
-            self.request.role = role;
-            self
+}
+impl pb::AuthRoleDeleteRequest {
+    pub fn build<'a, S: GrpcService>(
+        self,
+        client: &'a mut AuthClient<S>,
+    ) -> DoAuthRoleDeleteRequest<'a, S> {
+        DoAuthRoleDeleteRequest {
+            request: self,
+            client,
         }
     }
-    impl<'a> std::future::IntoFuture for DoAuthUserRevokeRoleRequest<'a> {
-        type Output = Result<pb::AuthUserRevokeRoleResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<
-                        Output = crate::error::Result<pb::AuthUserRevokeRoleResponse>,
-                    > + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoAuthUserRevokeRoleRequest { request, client } = self;
-            Box::pin(async move { client.user_revoke_role(request).await })
+}
+#[must_use]
+pub struct DoAuthRoleDeleteRequest<'a, S> {
+    pub request: pb::AuthRoleDeleteRequest,
+    pub(crate) client: &'a mut AuthClient<S>,
+}
+impl<'a, S> DoAuthRoleDeleteRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut AuthClient<S>) -> Self {
+        self.client = client;
+        self
+    }
+    pub fn with_role(mut self, role: String) -> Self {
+        self.request.role = role;
+        self
+    }
+}
+impl<'a, S> std::future::IntoFuture for DoAuthRoleDeleteRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::AuthRoleDeleteResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleDeleteResponse>> + 'a,
+        >,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoAuthRoleDeleteRequest { request, client } = self;
+        Box::pin(async move { client.role_delete(request).await })
+    }
+}
+impl pb::AuthRoleGrantPermissionRequest {
+    pub fn build<'a, S: GrpcService>(
+        self,
+        client: &'a mut AuthClient<S>,
+    ) -> DoAuthRoleGrantPermissionRequest<'a, S> {
+        DoAuthRoleGrantPermissionRequest {
+            request: self,
+            client,
         }
     }
-    #[must_use]
-    pub struct DoAuthRoleAddRequest<'a> {
-        pub request: pb::AuthRoleAddRequest,
-        pub(crate) client: &'a mut AuthClient,
+}
+#[must_use]
+pub struct DoAuthRoleGrantPermissionRequest<'a, S> {
+    pub request: pb::AuthRoleGrantPermissionRequest,
+    pub(crate) client: &'a mut AuthClient<S>,
+}
+impl<'a, S> DoAuthRoleGrantPermissionRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut AuthClient<S>) -> Self {
+        self.client = client;
+        self
     }
-    impl<'a> DoAuthRoleAddRequest<'a> {
-        pub fn from_client(client: &'a mut AuthClient) -> Self {
-            DoAuthRoleAddRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-        pub fn with_name(mut self, name: String) -> Self {
-            self.request.name = name;
-            self
-        }
+    pub fn with_name(mut self, name: String) -> Self {
+        self.request.name = name;
+        self
     }
-    impl<'a> std::future::IntoFuture for DoAuthRoleAddRequest<'a> {
-        type Output = Result<pb::AuthRoleAddResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleAddResponse>>
-                    + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoAuthRoleAddRequest { request, client } = self;
-            Box::pin(async move { client.role_add(request).await })
-        }
+}
+impl<'a, S> std::future::IntoFuture for DoAuthRoleGrantPermissionRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::AuthRoleGrantPermissionResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = crate::error::Result<pb::AuthRoleGrantPermissionResponse>,
+                > + 'a,
+        >,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoAuthRoleGrantPermissionRequest { request, client } = self;
+        Box::pin(async move { client.role_grant_permission(request).await })
     }
-    #[must_use]
-    pub struct DoAuthRoleGetRequest<'a> {
-        pub request: pb::AuthRoleGetRequest,
-        pub(crate) client: &'a mut AuthClient,
-    }
-    impl<'a> DoAuthRoleGetRequest<'a> {
-        pub fn from_client(client: &'a mut AuthClient) -> Self {
-            DoAuthRoleGetRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-        pub fn with_role(mut self, role: String) -> Self {
-            self.request.role = role;
-            self
+}
+impl pb::AuthRoleRevokePermissionRequest {
+    pub fn build<'a, S: GrpcService>(
+        self,
+        client: &'a mut AuthClient<S>,
+    ) -> DoAuthRoleRevokePermissionRequest<'a, S> {
+        DoAuthRoleRevokePermissionRequest {
+            request: self,
+            client,
         }
     }
-    impl<'a> std::future::IntoFuture for DoAuthRoleGetRequest<'a> {
-        type Output = Result<pb::AuthRoleGetResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleGetResponse>>
-                    + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoAuthRoleGetRequest { request, client } = self;
-            Box::pin(async move { client.role_get(request).await })
-        }
+}
+#[must_use]
+pub struct DoAuthRoleRevokePermissionRequest<'a, S> {
+    pub request: pb::AuthRoleRevokePermissionRequest,
+    pub(crate) client: &'a mut AuthClient<S>,
+}
+impl<'a, S> DoAuthRoleRevokePermissionRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut AuthClient<S>) -> Self {
+        self.client = client;
+        self
     }
-    #[must_use]
-    pub struct DoAuthRoleListRequest<'a> {
-        pub request: pb::AuthRoleListRequest,
-        pub(crate) client: &'a mut AuthClient,
+    pub fn with_role(mut self, role: String) -> Self {
+        self.request.role = role;
+        self
     }
-    impl<'a> DoAuthRoleListRequest<'a> {
-        pub fn from_client(client: &'a mut AuthClient) -> Self {
-            DoAuthRoleListRequest {
-                request: Default::default(),
-                client,
-            }
-        }
+    pub fn with_key(mut self, key: Vec<u8>) -> Self {
+        self.request.key = key;
+        self
     }
-    impl<'a> std::future::IntoFuture for DoAuthRoleListRequest<'a> {
-        type Output = Result<pb::AuthRoleListResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleListResponse>>
-                    + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoAuthRoleListRequest { request, client } = self;
-            Box::pin(async move { client.role_list(request).await })
-        }
+    pub fn with_range_end(mut self, range_end: Vec<u8>) -> Self {
+        self.request.range_end = range_end;
+        self
     }
-    #[must_use]
-    pub struct DoAuthRoleDeleteRequest<'a> {
-        pub request: pb::AuthRoleDeleteRequest,
-        pub(crate) client: &'a mut AuthClient,
-    }
-    impl<'a> DoAuthRoleDeleteRequest<'a> {
-        pub fn from_client(client: &'a mut AuthClient) -> Self {
-            DoAuthRoleDeleteRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-        pub fn with_role(mut self, role: String) -> Self {
-            self.request.role = role;
-            self
-        }
-    }
-    impl<'a> std::future::IntoFuture for DoAuthRoleDeleteRequest<'a> {
-        type Output = Result<pb::AuthRoleDeleteResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::AuthRoleDeleteResponse>>
-                    + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoAuthRoleDeleteRequest { request, client } = self;
-            Box::pin(async move { client.role_delete(request).await })
-        }
-    }
-    #[must_use]
-    pub struct DoAuthRoleGrantPermissionRequest<'a> {
-        pub request: pb::AuthRoleGrantPermissionRequest,
-        pub(crate) client: &'a mut AuthClient,
-    }
-    impl<'a> DoAuthRoleGrantPermissionRequest<'a> {
-        pub fn from_client(client: &'a mut AuthClient) -> Self {
-            DoAuthRoleGrantPermissionRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-        pub fn with_name(mut self, name: String) -> Self {
-            self.request.name = name;
-            self
-        }
-    }
-    impl<'a> std::future::IntoFuture for DoAuthRoleGrantPermissionRequest<'a> {
-        type Output = Result<pb::AuthRoleGrantPermissionResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<
-                        Output = crate::error::Result<pb::AuthRoleGrantPermissionResponse>,
-                    > + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoAuthRoleGrantPermissionRequest { request, client } = self;
-            Box::pin(async move { client.role_grant_permission(request).await })
-        }
-    }
-    #[must_use]
-    pub struct DoAuthRoleRevokePermissionRequest<'a> {
-        pub request: pb::AuthRoleRevokePermissionRequest,
-        pub(crate) client: &'a mut AuthClient,
-    }
-    impl<'a> DoAuthRoleRevokePermissionRequest<'a> {
-        pub fn from_client(client: &'a mut AuthClient) -> Self {
-            DoAuthRoleRevokePermissionRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-        pub fn with_role(mut self, role: String) -> Self {
-            self.request.role = role;
-            self
-        }
-        pub fn with_key(mut self, key: Vec<u8>) -> Self {
-            self.request.key = key;
-            self
-        }
-        pub fn with_range_end(mut self, range_end: Vec<u8>) -> Self {
-            self.request.range_end = range_end;
-            self
-        }
-    }
-    impl<'a> std::future::IntoFuture for DoAuthRoleRevokePermissionRequest<'a> {
-        type Output = Result<pb::AuthRoleRevokePermissionResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<
-                        Output = crate::error::Result<pb::AuthRoleRevokePermissionResponse>,
-                    > + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoAuthRoleRevokePermissionRequest { request, client } = self;
-            Box::pin(async move { client.role_revoke_permission(request).await })
-        }
+}
+impl<'a, S> std::future::IntoFuture for DoAuthRoleRevokePermissionRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::AuthRoleRevokePermissionResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = crate::error::Result<pb::AuthRoleRevokePermissionResponse>,
+                > + 'a,
+        >,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoAuthRoleRevokePermissionRequest { request, client } = self;
+        Box::pin(async move { client.role_revoke_permission(request).await })
     }
 }
