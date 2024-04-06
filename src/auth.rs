@@ -381,10 +381,7 @@ where
 }
 
 impl pb::AuthEnableRequest {
-    pub fn build<'a, S: GrpcService>(
-        self,
-        client: &'a mut AuthClient<S>,
-    ) -> DoAuthEnableRequest<'a, S> {
+    pub fn build<S: GrpcService>(self, client: &mut AuthClient<S>) -> DoAuthEnableRequest<'_, S> {
         DoAuthEnableRequest {
             request: self,
             client,
@@ -419,10 +416,7 @@ where
     }
 }
 impl pb::AuthDisableRequest {
-    pub fn build<'a, S: GrpcService>(
-        self,
-        client: &'a mut AuthClient<S>,
-    ) -> DoAuthDisableRequest<'a, S> {
+    pub fn build<S: GrpcService>(self, client: &mut AuthClient<S>) -> DoAuthDisableRequest<'_, S> {
         DoAuthDisableRequest {
             request: self,
             client,
@@ -457,10 +451,7 @@ where
     }
 }
 impl pb::AuthStatusRequest {
-    pub fn build<'a, S: GrpcService>(
-        self,
-        client: &'a mut AuthClient<S>,
-    ) -> DoAuthStatusRequest<'a, S> {
+    pub fn build<S: GrpcService>(self, client: &mut AuthClient<S>) -> DoAuthStatusRequest<'_, S> {
         DoAuthStatusRequest {
             request: self,
             client,
@@ -499,10 +490,7 @@ impl pb::AuthenticateRequest {
         Self { name, password }
     }
 
-    pub fn build<'a, S: GrpcService>(
-        self,
-        client: &'a mut AuthClient<S>,
-    ) -> DoAuthenticateRequest<'a, S> {
+    pub fn build<S: GrpcService>(self, client: &mut AuthClient<S>) -> DoAuthenticateRequest<'_, S> {
         DoAuthenticateRequest {
             request: self,
             client,
@@ -553,10 +541,7 @@ impl pb::AuthUserAddRequest {
         }
     }
 
-    pub fn build<'a, S: GrpcService>(
-        self,
-        client: &'a mut AuthClient<S>,
-    ) -> DoAuthUserAddRequest<'a, S> {
+    pub fn build<S: GrpcService>(self, client: &mut AuthClient<S>) -> DoAuthUserAddRequest<'_, S> {
         DoAuthUserAddRequest {
             request: self,
             client,
@@ -607,10 +592,7 @@ impl pb::AuthUserGetRequest {
         Self { name }
     }
 
-    pub fn build<'a, S: GrpcService>(
-        self,
-        client: &'a mut AuthClient<S>,
-    ) -> DoAuthUserGetRequest<'a, S> {
+    pub fn build<S: GrpcService>(self, client: &mut AuthClient<S>) -> DoAuthUserGetRequest<'_, S> {
         DoAuthUserGetRequest {
             request: self,
             client,
@@ -649,10 +631,7 @@ where
     }
 }
 impl pb::AuthUserListRequest {
-    pub fn build<'a, S: GrpcService>(
-        self,
-        client: &'a mut AuthClient<S>,
-    ) -> DoAuthUserListRequest<'a, S> {
+    pub fn build<S: GrpcService>(self, client: &mut AuthClient<S>) -> DoAuthUserListRequest<'_, S> {
         DoAuthUserListRequest {
             request: self,
             client,
@@ -687,10 +666,10 @@ where
     }
 }
 impl pb::AuthUserDeleteRequest {
-    pub fn build<'a, S: GrpcService>(
+    pub fn build<S: GrpcService>(
         self,
-        client: &'a mut AuthClient<S>,
-    ) -> DoAuthUserDeleteRequest<'a, S> {
+        client: &mut AuthClient<S>,
+    ) -> DoAuthUserDeleteRequest<'_, S> {
         DoAuthUserDeleteRequest {
             request: self,
             client,
@@ -731,10 +710,10 @@ where
     }
 }
 impl pb::AuthUserChangePasswordRequest {
-    pub fn build<'a, S: GrpcService>(
+    pub fn build<S: GrpcService>(
         self,
-        client: &'a mut AuthClient<S>,
-    ) -> DoAuthUserChangePasswordRequest<'a, S> {
+        client: &mut AuthClient<S>,
+    ) -> DoAuthUserChangePasswordRequest<'_, S> {
         DoAuthUserChangePasswordRequest {
             request: self,
             client,
@@ -785,10 +764,10 @@ where
     }
 }
 impl pb::AuthUserGrantRoleRequest {
-    pub fn build<'a, S: GrpcService>(
+    pub fn build<S: GrpcService>(
         self,
-        client: &'a mut AuthClient<S>,
-    ) -> DoAuthUserGrantRoleRequest<'a, S> {
+        client: &mut AuthClient<S>,
+    ) -> DoAuthUserGrantRoleRequest<'_, S> {
         DoAuthUserGrantRoleRequest {
             request: self,
             client,
@@ -834,10 +813,10 @@ where
     }
 }
 impl pb::AuthUserRevokeRoleRequest {
-    pub fn build<'a, S: GrpcService>(
+    pub fn build<S: GrpcService>(
         self,
-        client: &'a mut AuthClient<S>,
-    ) -> DoAuthUserRevokeRoleRequest<'a, S> {
+        client: &mut AuthClient<S>,
+    ) -> DoAuthUserRevokeRoleRequest<'_, S> {
         DoAuthUserRevokeRoleRequest {
             request: self,
             client,
@@ -883,10 +862,7 @@ where
     }
 }
 impl pb::AuthRoleAddRequest {
-    pub fn build<'a, S: GrpcService>(
-        self,
-        client: &'a mut AuthClient<S>,
-    ) -> DoAuthRoleAddRequest<'a, S> {
+    pub fn build<S: GrpcService>(self, client: &mut AuthClient<S>) -> DoAuthRoleAddRequest<'_, S> {
         DoAuthRoleAddRequest {
             request: self,
             client,
@@ -925,10 +901,7 @@ where
     }
 }
 impl pb::AuthRoleGetRequest {
-    pub fn build<'a, S: GrpcService>(
-        self,
-        client: &'a mut AuthClient<S>,
-    ) -> DoAuthRoleGetRequest<'a, S> {
+    pub fn build<S: GrpcService>(self, client: &mut AuthClient<S>) -> DoAuthRoleGetRequest<'_, S> {
         DoAuthRoleGetRequest {
             request: self,
             client,
@@ -967,10 +940,7 @@ where
     }
 }
 impl pb::AuthRoleListRequest {
-    pub fn build<'a, S: GrpcService>(
-        self,
-        client: &'a mut AuthClient<S>,
-    ) -> DoAuthRoleListRequest<'a, S> {
+    pub fn build<S: GrpcService>(self, client: &mut AuthClient<S>) -> DoAuthRoleListRequest<'_, S> {
         DoAuthRoleListRequest {
             request: self,
             client,
@@ -1005,10 +975,10 @@ where
     }
 }
 impl pb::AuthRoleDeleteRequest {
-    pub fn build<'a, S: GrpcService>(
+    pub fn build<S: GrpcService>(
         self,
-        client: &'a mut AuthClient<S>,
-    ) -> DoAuthRoleDeleteRequest<'a, S> {
+        client: &mut AuthClient<S>,
+    ) -> DoAuthRoleDeleteRequest<'_, S> {
         DoAuthRoleDeleteRequest {
             request: self,
             client,
@@ -1049,10 +1019,10 @@ where
     }
 }
 impl pb::AuthRoleGrantPermissionRequest {
-    pub fn build<'a, S: GrpcService>(
+    pub fn build<S: GrpcService>(
         self,
-        client: &'a mut AuthClient<S>,
-    ) -> DoAuthRoleGrantPermissionRequest<'a, S> {
+        client: &mut AuthClient<S>,
+    ) -> DoAuthRoleGrantPermissionRequest<'_, S> {
         DoAuthRoleGrantPermissionRequest {
             request: self,
             client,
@@ -1095,10 +1065,10 @@ where
     }
 }
 impl pb::AuthRoleRevokePermissionRequest {
-    pub fn build<'a, S: GrpcService>(
+    pub fn build<S: GrpcService>(
         self,
-        client: &'a mut AuthClient<S>,
-    ) -> DoAuthRoleRevokePermissionRequest<'a, S> {
+        client: &mut AuthClient<S>,
+    ) -> DoAuthRoleRevokePermissionRequest<'_, S> {
         DoAuthRoleRevokePermissionRequest {
             request: self,
             client,

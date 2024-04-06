@@ -35,7 +35,7 @@ async fn main() -> Result<(), Error> {
     // after 1+3 seconds, lease unavailable
     let value = client.get_string(key).await;
     println!("try get {}: {:?} at {:?}", key, value, start.elapsed());
-    assert_eq!(value.is_err(), true);
+    assert!(value.is_err());
 
     // another case with keep_alive
     let start = std::time::Instant::now();

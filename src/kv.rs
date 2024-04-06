@@ -247,7 +247,7 @@ impl pb::RangeRequest {
         self
     }
 
-    pub fn build<'a, S: GrpcService>(self, client: &'a mut KvClient<S>) -> DoRangeRequest<'a, S> {
+    pub fn build<S: GrpcService>(self, client: &mut KvClient<S>) -> DoRangeRequest<'_, S> {
         DoRangeRequest {
             request: self,
             client,
@@ -349,7 +349,7 @@ impl pb::PutRequest {
         }
     }
 
-    pub fn build<'a, S: GrpcService>(self, client: &'a mut KvClient<S>) -> DoPutRequest<'a, S> {
+    pub fn build<S: GrpcService>(self, client: &mut KvClient<S>) -> DoPutRequest<'_, S> {
         DoPutRequest {
             request: self,
             client,
@@ -416,10 +416,7 @@ impl pb::DeleteRangeRequest {
         }
     }
 
-    pub fn build<'a, S: GrpcService>(
-        self,
-        client: &'a mut KvClient<S>,
-    ) -> DoDeleteRangeRequest<'a, S> {
+    pub fn build<S: GrpcService>(self, client: &mut KvClient<S>) -> DoDeleteRangeRequest<'_, S> {
         DoDeleteRangeRequest {
             request: self,
             client,
@@ -568,7 +565,7 @@ impl pb::TxnRequest {
         self
     }
 
-    pub fn build<'a, S: GrpcService>(self, client: &'a mut KvClient<S>) -> DoTxnRequest<'a, S> {
+    pub fn build<S: GrpcService>(self, client: &mut KvClient<S>) -> DoTxnRequest<'_, S> {
         DoTxnRequest {
             request: self,
             client,
@@ -622,10 +619,7 @@ impl pb::CompactionRequest {
         pb::CompactionRequest { revision, physical }
     }
 
-    pub fn build<'a, S: GrpcService>(
-        self,
-        client: &'a mut KvClient<S>,
-    ) -> DoCompactionRequest<'a, S> {
+    pub fn build<S: GrpcService>(self, client: &mut KvClient<S>) -> DoCompactionRequest<'_, S> {
         DoCompactionRequest {
             request: self,
             client,

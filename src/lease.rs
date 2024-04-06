@@ -119,7 +119,7 @@ where
 
 impl<S> LeaseClient<S>
 where
-    S: GrpcService,
+    S: GrpcService + Send,
 {
     pub(crate) fn new(transport: S) -> Self {
         LeaseClient {
@@ -182,10 +182,7 @@ impl pb::LeaseGrantRequest {
         pb::LeaseGrantRequest { ttl, id }
     }
 
-    pub fn build<'a, S: GrpcService>(
-        self,
-        client: &'a mut LeaseClient<S>,
-    ) -> DoLeaseGrantRequest<'a, S> {
+    pub fn build<S: GrpcService>(self, client: &mut LeaseClient<S>) -> DoLeaseGrantRequest<'_, S> {
         DoLeaseGrantRequest {
             request: self,
             client,
@@ -234,10 +231,7 @@ impl pb::LeaseRevokeRequest {
         pb::LeaseRevokeRequest { id }
     }
 
-    pub fn build<'a, S: GrpcService>(
-        self,
-        client: &'a mut LeaseClient<S>,
-    ) -> DoLeaseRevokeRequest<'a, S> {
+    pub fn build<S: GrpcService>(self, client: &mut LeaseClient<S>) -> DoLeaseRevokeRequest<'_, S> {
         DoLeaseRevokeRequest {
             request: self,
             client,
@@ -284,10 +278,10 @@ impl pb::LeaseKeepAliveRequest {
 }
 
 impl pb::LeaseTimeToLiveRequest {
-    pub fn build<'a, S: GrpcService>(
+    pub fn build<S: GrpcService>(
         self,
-        client: &'a mut LeaseClient<S>,
-    ) -> DoLeaseTimeToLiveRequest<'a, S> {
+        client: &mut LeaseClient<S>,
+    ) -> DoLeaseTimeToLiveRequest<'_, S> {
         DoLeaseTimeToLiveRequest {
             request: self,
             client,
@@ -336,10 +330,7 @@ where
 }
 
 impl pb::LeaseLeasesRequest {
-    pub fn build<'a, S: GrpcService>(
-        self,
-        client: &'a mut LeaseClient<S>,
-    ) -> DoLeaseLeasesRequest<'a, S> {
+    pub fn build<S: GrpcService>(self, client: &mut LeaseClient<S>) -> DoLeaseLeasesRequest<'_, S> {
         DoLeaseLeasesRequest {
             request: self,
             client,
@@ -381,7 +372,7 @@ pub struct DoLeaseKeepAlive<'a, S> {
 
 impl<'a, S> DoLeaseKeepAlive<'a, S>
 where
-    S: GrpcService,
+    S: GrpcService + Send,
 {
     pub fn new(lease_id: i64, client: &'a mut LeaseClient<S>) -> Self {
         DoLeaseKeepAlive { lease_id, client }
@@ -415,7 +406,7 @@ impl<'a, S> fmt::Debug for DoLeaseKeepAlive<'a, S> {
 
 impl<'a, S> IntoFuture for DoLeaseKeepAlive<'a, S>
 where
-    S: GrpcService,
+    S: GrpcService + Send,
 {
     type Output = Result<LeaseKeepAliver>;
     type IntoFuture = Pin<Box<dyn Future<Output = Result<LeaseKeepAliver>> + 'a>>;

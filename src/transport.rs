@@ -1,46 +1,45 @@
 use http::uri::PathAndQuery;
+use std::future::Future;
 use tonic::{metadata::AsciiMetadataValue, Extensions};
 
 use crate::{auth::InnerAuthClient, error::Result, Error};
 
 const TOKEN_FIELD_NAME: &str = "token";
 
-pub(crate) type Transport = CredentialInterceptor<GrpcClient>;
-
 pub trait GrpcService {
-    async fn unary<M, T>(
+    fn unary<M, T>(
         &mut self,
         req: tonic::Request<M>,
         path: PathAndQuery,
-    ) -> Result<tonic::Response<T>>
+    ) -> impl Future<Output = Result<tonic::Response<T>>> + Send
     where
         M: prost::Message + Clone + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static;
 
-    async fn client_streaming<S, M, T>(
+    fn client_streaming<S, M, T>(
         &mut self,
         req: tonic::Request<S>,
         path: PathAndQuery,
-    ) -> Result<tonic::Response<T>>
+    ) -> impl Future<Output = Result<tonic::Response<T>>> + Send
     where
         S: futures::Stream<Item = M> + Send + 'static,
         M: prost::Message + Clone + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static;
 
-    async fn server_streaming<M, T>(
+    fn server_streaming<M, T>(
         &mut self,
         req: tonic::Request<M>,
         path: PathAndQuery,
-    ) -> Result<tonic::Response<tonic::Streaming<T>>>
+    ) -> impl Future<Output = Result<tonic::Response<tonic::Streaming<T>>>> + Send
     where
         M: prost::Message + Clone + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static;
 
-    async fn streaming<S, M, T>(
+    fn streaming<S, M, T>(
         &mut self,
         req: tonic::Request<S>,
         path: PathAndQuery,
-    ) -> Result<tonic::Response<tonic::Streaming<T>>>
+    ) -> impl Future<Output = Result<tonic::Response<tonic::Streaming<T>>>> + Send
     where
         S: futures::Stream<Item = M> + Send + 'static,
         M: prost::Message + Clone + Send + Sync + 'static,
@@ -152,54 +151,54 @@ impl GrpcClient {
 }
 
 impl GrpcService for GrpcClient {
-    async fn unary<M, T>(
+    fn unary<M, T>(
         &mut self,
         req: tonic::Request<M>,
         path: PathAndQuery,
-    ) -> Result<tonic::Response<T>>
+    ) -> impl Future<Output = Result<tonic::Response<T>>> + Send
     where
         M: prost::Message + Clone + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static,
     {
-        self.unary(req, path).await
+        self.unary(req, path)
     }
 
-    async fn client_streaming<S, M, T>(
+    fn client_streaming<S, M, T>(
         &mut self,
         req: tonic::Request<S>,
         path: PathAndQuery,
-    ) -> Result<tonic::Response<T>>
+    ) -> impl Future<Output = Result<tonic::Response<T>>> + Send
     where
         S: futures::Stream<Item = M> + Send + 'static,
         M: prost::Message + Clone + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static,
     {
-        self.client_streaming(req, path).await
+        self.client_streaming(req, path)
     }
 
-    async fn server_streaming<M, T>(
+    fn server_streaming<M, T>(
         &mut self,
         req: tonic::Request<M>,
         path: PathAndQuery,
-    ) -> Result<tonic::Response<tonic::Streaming<T>>>
+    ) -> impl Future<Output = Result<tonic::Response<tonic::Streaming<T>>>> + Send
     where
         M: prost::Message + Clone + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static,
     {
-        self.server_streaming(req, path).await
+        self.server_streaming(req, path)
     }
 
-    async fn streaming<S, M, T>(
+    fn streaming<S, M, T>(
         &mut self,
         req: tonic::Request<S>,
         path: PathAndQuery,
-    ) -> Result<tonic::Response<tonic::Streaming<T>>>
+    ) -> impl Future<Output = Result<tonic::Response<tonic::Streaming<T>>>> + Send
     where
         S: futures::Stream<Item = M> + Send + 'static,
         M: prost::Message + Clone + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static,
     {
-        self.streaming(req, path).await
+        self.streaming(req, path)
     }
 }
 
@@ -218,8 +217,7 @@ where
         credential: impl Into<Option<(String, String)>>,
         token: impl Into<Option<AsciiMetadataValue>>,
         inner: C,
-    ) -> Self
-    {
+    ) -> Self {
         Self {
             credential: credential.into(),
             token: token.into(),
@@ -349,7 +347,7 @@ where
                 .await?;
 
             self.token = AsciiMetadataValue::try_from(token)
-                .expect("token to AsciiMetadataValue failed")
+                .map_err(|err| Error::new(crate::ErrKind::AuthFailed, err))?
                 .into();
         }
 

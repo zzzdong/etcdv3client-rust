@@ -4,9 +4,8 @@ use std::pin::Pin;
 
 use crate::error::{ErrKind, Error, Result};
 use crate::pb;
-use crate::transport::{GrpcService, Transport};
+use crate::transport::GrpcService;
 use crate::utils::build_prefix_end;
-use crate::Client;
 
 use tokio::sync::mpsc::{channel, Sender};
 use tonic::codec::Streaming;
@@ -96,7 +95,7 @@ pub struct DoCreateWatch<'a, S> {
 
 impl<'a, S> DoCreateWatch<'a, S>
 where
-    S: GrpcService,
+    S: GrpcService + Send,
 {
     pub fn new(key: impl Into<Vec<u8>>, client: &'a mut WatchClient<S>) -> Self {
         DoCreateWatch {
@@ -161,10 +160,10 @@ impl<'a, S> fmt::Debug for DoCreateWatch<'a, S> {
 
 impl<'a, S> IntoFuture for DoCreateWatch<'a, S>
 where
-    S: GrpcService
+    S: GrpcService + Send,
 {
     type Output = Result<Watcher>;
-    type IntoFuture = Pin<Box<dyn Future<Output = Result<Watcher>> + 'a>>;
+    type IntoFuture = Pin<Box<dyn Future<Output = Result<Watcher>> + Send + 'a>>;
 
     fn into_future(self) -> Self::IntoFuture {
         Box::pin(self.send())

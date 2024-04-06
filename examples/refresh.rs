@@ -1,4 +1,4 @@
-use etcdv3client::{transport::GrpcService, Client, Error, SimpleClient, WatchClient};
+use etcdv3client::{Client, Error, SimpleClient, WatchClient};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
