@@ -1,46 +1,43 @@
 use http::uri::PathAndQuery;
+use std::future::Future;
 use tonic::{metadata::AsciiMetadataValue, Extensions};
 
-use crate::{auth::InnerAuthClient, error::Result, Error};
+use crate::{auth::InnerAuthClient, error::Result, utils::TOKEN_FIELD_NAME};
 
-const TOKEN_FIELD_NAME: &str = "token";
-
-pub(crate) type Transport = CredentialInterceptor<GrpcClient>;
-
-pub trait GrpcService {
-    async fn unary<M, T>(
+pub trait GrpcService: Send + Clone + std::fmt::Debug {
+    fn unary<M, T>(
         &mut self,
         req: tonic::Request<M>,
         path: PathAndQuery,
-    ) -> Result<tonic::Response<T>>
+    ) -> impl Future<Output = Result<tonic::Response<T>>> + Send
     where
         M: prost::Message + Clone + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static;
 
-    async fn client_streaming<S, M, T>(
+    fn client_streaming<S, M, T>(
         &mut self,
         req: tonic::Request<S>,
         path: PathAndQuery,
-    ) -> Result<tonic::Response<T>>
+    ) -> impl Future<Output = Result<tonic::Response<T>>> + Send
     where
         S: futures::Stream<Item = M> + Send + 'static,
         M: prost::Message + Clone + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static;
 
-    async fn server_streaming<M, T>(
+    fn server_streaming<M, T>(
         &mut self,
         req: tonic::Request<M>,
         path: PathAndQuery,
-    ) -> Result<tonic::Response<tonic::Streaming<T>>>
+    ) -> impl Future<Output = Result<tonic::Response<tonic::Streaming<T>>>> + Send
     where
         M: prost::Message + Clone + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static;
 
-    async fn streaming<S, M, T>(
+    fn streaming<S, M, T>(
         &mut self,
         req: tonic::Request<S>,
         path: PathAndQuery,
-    ) -> Result<tonic::Response<tonic::Streaming<T>>>
+    ) -> impl Future<Output = Result<tonic::Response<tonic::Streaming<T>>>> + Send
     where
         S: futures::Stream<Item = M> + Send + 'static,
         M: prost::Message + Clone + Send + Sync + 'static,
@@ -48,11 +45,11 @@ pub trait GrpcService {
 }
 
 #[derive(Debug, Clone)]
-pub struct GrpcClient {
+pub struct TonicClient {
     inner: tonic::client::Grpc<tonic::transport::Channel>,
 }
 
-impl GrpcClient {
+impl TonicClient {
     pub fn new(channel: tonic::transport::Channel) -> Self {
         Self {
             inner: tonic::client::Grpc::new(channel),
@@ -151,7 +148,7 @@ impl GrpcClient {
     }
 }
 
-impl GrpcService for GrpcClient {
+impl GrpcService for TonicClient {
     async fn unary<M, T>(
         &mut self,
         req: tonic::Request<M>,
@@ -204,7 +201,7 @@ impl GrpcService for GrpcClient {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct CredentialInterceptor<C> {
+pub struct CredentialInterceptor<C> {
     credential: Option<(String, String)>,
     token: Option<AsciiMetadataValue>,
     inner: C,
@@ -218,8 +215,7 @@ where
         credential: impl Into<Option<(String, String)>>,
         token: impl Into<Option<AsciiMetadataValue>>,
         inner: C,
-    ) -> Self
-    {
+    ) -> Self {
         Self {
             credential: credential.into(),
             token: token.into(),
@@ -243,7 +239,12 @@ where
         match self.inner.unary(req, path.clone()).await {
             Ok(resp) => Ok(resp),
             Err(err) => {
-                if err.should_refresh_token() {
+                if err.is_auth_not_enabled() {
+                    tracing::warn!("auth not enabled, retry with remove auth token.");
+                    self.token.take();
+                    self.inner.unary(req_cloned, path).await
+                } else if err.should_refresh_token() {
+                    tracing::debug!(?err, "refreshing token");
                     self.refresh_token().await?;
                     self.insert_token(&mut req_cloned);
 
@@ -328,7 +329,7 @@ where
         (req, req_cloned)
     }
 
-    fn should_refresh_token(&self, err: &Error) -> bool {
+    fn should_refresh_token(&self, err: &crate::Error) -> bool {
         if self.credential.is_none() {
             return false;
         }
@@ -344,13 +345,27 @@ where
 
     async fn refresh_token(&mut self) -> Result<()> {
         if let Some(ref cred) = self.credential {
-            let token = InnerAuthClient::new(self.inner.clone())
-                .get_token(&cred.0, &cred.1)
-                .await?;
+            let span = tracing::span!(tracing::Level::TRACE, "refresh_token");
+            let _ = span.enter();
 
-            self.token = AsciiMetadataValue::try_from(token)
-                .expect("token to AsciiMetadataValue failed")
-                .into();
+            match InnerAuthClient::new(self.inner.clone())
+                .get_token(&cred.0, &cred.1)
+                .await
+            {
+                Ok(token) => {
+                    self.token = AsciiMetadataValue::try_from(token)
+                        .map_err(|err| crate::Error::new(crate::ErrKind::AuthFailed, err))?
+                        .into();
+                }
+                Err(err) if err.is_auth_not_enabled() => {
+                    tracing::warn!("auth not enabled, remove auth token.");
+                    self.token.take();
+                }
+                Err(err) => {
+                    tracing::error!("get_token failed: {err:?}");
+                    return Err(err);
+                }
+            }
         }
 
         Ok(())

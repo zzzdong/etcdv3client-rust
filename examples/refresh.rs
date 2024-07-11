@@ -1,12 +1,12 @@
-use etcdv3client::{Client, Error, WatchClient};
+use etcdv3client::{Error, EtcdClient, WatchClient};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     tracing_subscriber::fmt::init();
 
     let endpoint = "http://127.0.0.1:2379";
-    let auth: Option<(String, String)> = Some(("root".to_string(), "123456".to_string()));
-    let mut client = Client::new(vec![endpoint], auth).await?;
+    let auth: (String, String) = ("root".to_string(), "123456".to_string());
+    let mut client = EtcdClient::new(vec![endpoint], auth).await?;
 
     let start = std::time::Instant::now();
 
@@ -40,9 +40,8 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-async fn watch(client: Client, id: u64) {
-    let mut watch_client = WatchClient::with_client(&client);
-
+async fn watch(client: EtcdClient, id: u64) {
+    let mut watch_client = WatchClient::new(client.service());
     match watch_client.watch_prefix("/").await {
         Ok(mut watcher) => {
             println!("[{}] etcd created wather.", id);

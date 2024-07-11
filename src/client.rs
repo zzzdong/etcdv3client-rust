@@ -1,27 +1,27 @@
-use crate::error::{ErrKind, Error, Result};
-use crate::pb;
-use crate::transport::CredentialInterceptor;
-
 use crate::auth::{AuthClient, InnerAuthClient};
+use crate::error::{ErrKind, Error, Result};
+use crate::grpc::{CredentialInterceptor, GrpcService, TonicClient};
 use crate::kv::KvClient;
 use crate::lease::{LeaseClient, LeaseKeepAliver};
-use crate::transport::{GrpcClient, Transport};
+use crate::pb;
 use crate::watch::{WatchClient, Watcher};
 
 use http::Uri;
 use tonic::transport::{channel::Channel, Endpoint};
 
-#[derive(Debug, Clone)]
-pub struct Client {
-    pub kv: KvClient,
-    pub auth: AuthClient,
-    pub watch: WatchClient,
-    pub lease: LeaseClient,
+pub type EtcdClient = Client<CredentialInterceptor<TonicClient>>;
 
-    pub(crate) transport: Transport,
+#[derive(Debug, Clone)]
+pub struct Client<S> {
+    pub kv: KvClient<S>,
+    pub auth: AuthClient<S>,
+    pub watch: WatchClient<S>,
+    pub lease: LeaseClient<S>,
+
+    pub(crate) service: S,
 }
 
-impl Client {
+impl Client<CredentialInterceptor<TonicClient>> {
     /// Create a new Client
     pub async fn new<U>(
         endpoints: impl Into<Vec<U>>,
@@ -57,15 +57,25 @@ impl Client {
         };
 
         let channel = new_channel(ep_uris).await?;
-        let transport = CredentialInterceptor::new(credential, token, GrpcClient::new(channel));
+        let service = CredentialInterceptor::new(credential, token, TonicClient::new(channel));
 
-        Ok(Client {
-            auth: AuthClient::new(transport.clone()),
-            kv: KvClient::new(transport.clone()),
-            watch: WatchClient::new(transport.clone()),
-            lease: LeaseClient::new(transport.clone()),
-            transport,
-        })
+        Ok(Client::with_service(service))
+    }
+}
+
+impl<S: GrpcService> Client<S> {
+    pub fn service(&self) -> S {
+        self.service.clone()
+    }
+
+    pub fn with_service(service: S) -> Self {
+        Client {
+            auth: AuthClient::new(service.clone()),
+            kv: KvClient::new(service.clone()),
+            watch: WatchClient::new(service.clone()),
+            lease: LeaseClient::new(service.clone()),
+            service,
+        }
     }
 
     /// Get value by key
@@ -163,7 +173,7 @@ async fn get_token(endpoints: &[Uri], name: &str, password: &str) -> Result<Stri
     for ep in endpoints {
         let channel = connect_to(ep.to_owned()).await?;
 
-        let mut auth_client = InnerAuthClient::new(GrpcClient::new(channel));
+        let mut auth_client = InnerAuthClient::new(TonicClient::new(channel));
 
         match auth_client
             .get_token(name.to_string(), password.to_string())

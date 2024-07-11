@@ -8,45 +8,42 @@ use tonic::IntoRequest;
 use tonic::IntoStreamingRequest;
 
 use crate::error::{ErrKind, Error, Result};
-use crate::pb::{self};
-use crate::transport::{GrpcService, Transport};
-use crate::Client;
-
-use helper::*;
+use crate::grpc::GrpcService;
+use crate::pb;
 
 const MPSC_CHANNEL_SIZE: usize = 1;
 
 #[derive(Debug, Clone)]
 pub struct InnerLeaseClient<S> {
-    transport: S,
+    service: S,
 }
 impl<S> InnerLeaseClient<S>
 where
     S: GrpcService,
 {
-    pub fn new(transport: S) -> Self {
-        Self { transport }
+    pub fn new(service: S) -> Self {
+        Self { service }
     }
     pub async fn lease_grant(
         &mut self,
         request: impl tonic::IntoRequest<pb::LeaseGrantRequest>,
     ) -> Result<tonic::Response<pb::LeaseGrantResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Lease/LeaseGrant");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn lease_revoke(
         &mut self,
         request: impl tonic::IntoRequest<pb::LeaseRevokeRequest>,
     ) -> Result<tonic::Response<pb::LeaseRevokeResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Lease/LeaseRevoke");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn lease_keep_alive(
         &mut self,
         request: impl tonic::IntoStreamingRequest<Message = pb::LeaseKeepAliveRequest>,
     ) -> Result<tonic::Response<tonic::codec::Streaming<pb::LeaseKeepAliveResponse>>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Lease/LeaseKeepAlive");
-        self.transport
+        self.service
             .streaming(request.into_streaming_request(), path)
             .await
     }
@@ -55,23 +52,24 @@ where
         request: impl tonic::IntoRequest<pb::LeaseTimeToLiveRequest>,
     ) -> Result<tonic::Response<pb::LeaseTimeToLiveResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Lease/LeaseTimeToLive");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn lease_leases(
         &mut self,
         request: impl tonic::IntoRequest<pb::LeaseLeasesRequest>,
     ) -> Result<tonic::Response<pb::LeaseLeasesResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Lease/LeaseLeases");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
 }
-
 #[derive(Debug, Clone)]
-pub struct LeaseClient {
-    inner: InnerLeaseClient<Transport>,
+pub struct LeaseClient<S> {
+    inner: InnerLeaseClient<S>,
 }
-
-impl LeaseClient {
+impl<S> LeaseClient<S>
+where
+    S: GrpcService,
+{
     pub async fn lease_grant(
         &mut self,
         request: pb::LeaseGrantRequest,
@@ -119,19 +117,18 @@ impl LeaseClient {
     }
 }
 
-impl LeaseClient {
-    pub(crate) fn new(transport: Transport) -> Self {
+impl<S> LeaseClient<S>
+where
+    S: GrpcService,
+{
+    pub(crate) fn new(service: S) -> Self {
         LeaseClient {
-            inner: InnerLeaseClient::new(transport),
+            inner: InnerLeaseClient::new(service),
         }
     }
 
-    pub fn with_client(client: &Client) -> Self {
-        Self::new(client.transport.clone())
-    }
-
-    pub fn do_grant(&mut self, ttl: i64) -> DoLeaseGrantRequest {
-        DoLeaseGrantRequest::new(ttl, self)
+    pub fn do_grant(&mut self, ttl: i64) -> DoLeaseGrantRequest<S> {
+        pb::LeaseGrantRequest::new(ttl, 0).build(self)
     }
 
     /// Grant a lease with the given ttl.
@@ -145,7 +142,7 @@ impl LeaseClient {
         ttl: i64,
         lease_id: i64,
     ) -> Result<pb::LeaseGrantResponse> {
-        self.do_grant(ttl).with_lease_id(lease_id).await
+        self.do_grant(ttl).with_id(lease_id).await
     }
 
     /// Revoke the given lease.
@@ -156,7 +153,7 @@ impl LeaseClient {
 
     /// Keep the lease alive.
     #[must_use]
-    pub fn do_keep_alive(&mut self, lease_id: i64) -> DoLeaseKeepAlive {
+    pub fn do_keep_alive(&mut self, lease_id: i64) -> DoLeaseKeepAlive<S> {
         DoLeaseKeepAlive::new(lease_id, self)
     }
 
@@ -184,25 +181,93 @@ impl pb::LeaseGrantRequest {
     fn new(ttl: i64, id: i64) -> Self {
         pb::LeaseGrantRequest { ttl, id }
     }
-}
 
-impl<'a> DoLeaseGrantRequest<'a> {
-    pub fn new(ttl: i64, client: &'a mut LeaseClient) -> Self {
+    pub fn build<S: GrpcService>(self, client: &mut LeaseClient<S>) -> DoLeaseGrantRequest<'_, S> {
         DoLeaseGrantRequest {
-            request: pb::LeaseGrantRequest::new(ttl, 0),
+            request: self,
             client,
         }
     }
+}
 
-    pub fn with_lease_id(mut self, lease_id: i64) -> Self {
-        self.request.id = lease_id;
+#[must_use]
+pub struct DoLeaseGrantRequest<'a, S> {
+    pub request: pb::LeaseGrantRequest,
+    pub(crate) client: &'a mut LeaseClient<S>,
+}
+impl<'a, S> DoLeaseGrantRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut LeaseClient<S>) -> Self {
+        self.client = client;
         self
+    }
+    pub fn with_ttl(mut self, ttl: i64) -> Self {
+        self.request.ttl = ttl;
+        self
+    }
+    pub fn with_id(mut self, id: i64) -> Self {
+        self.request.id = id;
+        self
+    }
+}
+impl<'a, S> std::future::IntoFuture for DoLeaseGrantRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::LeaseGrantResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::LeaseGrantResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoLeaseGrantRequest { request, client } = self;
+        Box::pin(async move { client.lease_grant(request).await })
     }
 }
 
 impl pb::LeaseRevokeRequest {
     fn new(id: i64) -> Self {
         pb::LeaseRevokeRequest { id }
+    }
+
+    pub fn build<S: GrpcService>(self, client: &mut LeaseClient<S>) -> DoLeaseRevokeRequest<'_, S> {
+        DoLeaseRevokeRequest {
+            request: self,
+            client,
+        }
+    }
+}
+
+#[must_use]
+pub struct DoLeaseRevokeRequest<'a, S> {
+    pub request: pb::LeaseRevokeRequest,
+    pub(crate) client: &'a mut LeaseClient<S>,
+}
+impl<'a, S> DoLeaseRevokeRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut LeaseClient<S>) -> Self {
+        self.client = client;
+        self
+    }
+    pub fn with_id(mut self, id: i64) -> Self {
+        self.request.id = id;
+        self
+    }
+}
+impl<'a, S> std::future::IntoFuture for DoLeaseRevokeRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::LeaseRevokeResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::LeaseRevokeResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoLeaseRevokeRequest { request, client } = self;
+        Box::pin(async move { client.lease_revoke(request).await })
     }
 }
 
@@ -212,13 +277,104 @@ impl pb::LeaseKeepAliveRequest {
     }
 }
 
-pub struct DoLeaseKeepAlive<'a> {
-    pub lease_id: i64,
-    client: &'a mut LeaseClient,
+impl pb::LeaseTimeToLiveRequest {
+    pub fn build<S: GrpcService>(
+        self,
+        client: &mut LeaseClient<S>,
+    ) -> DoLeaseTimeToLiveRequest<'_, S> {
+        DoLeaseTimeToLiveRequest {
+            request: self,
+            client,
+        }
+    }
 }
 
-impl<'a> DoLeaseKeepAlive<'a> {
-    pub fn new(lease_id: i64, client: &'a mut LeaseClient) -> Self {
+#[must_use]
+pub struct DoLeaseTimeToLiveRequest<'a, S> {
+    pub request: pb::LeaseTimeToLiveRequest,
+    pub(crate) client: &'a mut LeaseClient<S>,
+}
+impl<'a, S> DoLeaseTimeToLiveRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut LeaseClient<S>) -> Self {
+        self.client = client;
+        self
+    }
+    pub fn with_id(mut self, id: i64) -> Self {
+        self.request.id = id;
+        self
+    }
+    pub fn with_keys(mut self, keys: bool) -> Self {
+        self.request.keys = keys;
+        self
+    }
+}
+
+impl<'a, S> std::future::IntoFuture for DoLeaseTimeToLiveRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::LeaseTimeToLiveResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<
+            dyn std::future::Future<Output = crate::error::Result<pb::LeaseTimeToLiveResponse>>
+                + 'a,
+        >,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoLeaseTimeToLiveRequest { request, client } = self;
+        Box::pin(async move { client.lease_time_to_live(request).await })
+    }
+}
+
+impl pb::LeaseLeasesRequest {
+    pub fn build<S: GrpcService>(self, client: &mut LeaseClient<S>) -> DoLeaseLeasesRequest<'_, S> {
+        DoLeaseLeasesRequest {
+            request: self,
+            client,
+        }
+    }
+}
+#[must_use]
+pub struct DoLeaseLeasesRequest<'a, S> {
+    pub request: pb::LeaseLeasesRequest,
+    pub(crate) client: &'a mut LeaseClient<S>,
+}
+impl<'a, S> DoLeaseLeasesRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut LeaseClient<S>) -> Self {
+        self.client = client;
+        self
+    }
+}
+impl<'a, S> std::future::IntoFuture for DoLeaseLeasesRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::LeaseLeasesResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::LeaseLeasesResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoLeaseLeasesRequest { request, client } = self;
+        Box::pin(async move { client.lease_leases(request).await })
+    }
+}
+
+pub struct DoLeaseKeepAlive<'a, S> {
+    pub lease_id: i64,
+    client: &'a mut LeaseClient<S>,
+}
+
+impl<'a, S> DoLeaseKeepAlive<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn new(lease_id: i64, client: &'a mut LeaseClient<S>) -> Self {
         DoLeaseKeepAlive { lease_id, client }
     }
 
@@ -240,7 +396,7 @@ impl<'a> DoLeaseKeepAlive<'a> {
     }
 }
 
-impl<'a> fmt::Debug for DoLeaseKeepAlive<'a> {
+impl<'a, S> fmt::Debug for DoLeaseKeepAlive<'a, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DoLeaseKeepAlive")
             .field("lease_id", &self.lease_id)
@@ -248,7 +404,10 @@ impl<'a> fmt::Debug for DoLeaseKeepAlive<'a> {
     }
 }
 
-impl<'a> IntoFuture for DoLeaseKeepAlive<'a> {
+impl<'a, S> IntoFuture for DoLeaseKeepAlive<'a, S>
+where
+    S: GrpcService,
+{
     type Output = Result<LeaseKeepAliver>;
     type IntoFuture = Pin<Box<dyn Future<Output = Result<LeaseKeepAliver>> + 'a>>;
 
@@ -312,142 +471,5 @@ impl pb::LeaseTimeToLiveRequest {
 impl pb::LeaseLeasesRequest {
     fn new() -> Self {
         pb::LeaseLeasesRequest {}
-    }
-}
-
-pub mod helper {
-    #![allow(dead_code)]
-
-    use crate::error::Result;
-    use crate::lease::LeaseClient;
-    use crate::pb;
-
-    #[must_use]
-    pub struct DoLeaseGrantRequest<'a> {
-        pub request: pb::LeaseGrantRequest,
-        pub(crate) client: &'a mut LeaseClient,
-    }
-    impl<'a> DoLeaseGrantRequest<'a> {
-        pub fn from_client(client: &'a mut LeaseClient) -> Self {
-            DoLeaseGrantRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-        pub fn with_ttl(mut self, ttl: i64) -> Self {
-            self.request.ttl = ttl;
-            self
-        }
-        pub fn with_id(mut self, id: i64) -> Self {
-            self.request.id = id;
-            self
-        }
-    }
-    impl<'a> std::future::IntoFuture for DoLeaseGrantRequest<'a> {
-        type Output = Result<pb::LeaseGrantResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::LeaseGrantResponse>>
-                    + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoLeaseGrantRequest { request, client } = self;
-            Box::pin(async move { client.lease_grant(request).await })
-        }
-    }
-    #[must_use]
-    pub struct DoLeaseRevokeRequest<'a> {
-        pub request: pb::LeaseRevokeRequest,
-        pub(crate) client: &'a mut LeaseClient,
-    }
-    impl<'a> DoLeaseRevokeRequest<'a> {
-        pub fn from_client(client: &'a mut LeaseClient) -> Self {
-            DoLeaseRevokeRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-        pub fn with_id(mut self, id: i64) -> Self {
-            self.request.id = id;
-            self
-        }
-    }
-    impl<'a> std::future::IntoFuture for DoLeaseRevokeRequest<'a> {
-        type Output = Result<pb::LeaseRevokeResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::LeaseRevokeResponse>>
-                    + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoLeaseRevokeRequest { request, client } = self;
-            Box::pin(async move { client.lease_revoke(request).await })
-        }
-    }
-    #[must_use]
-    pub struct DoLeaseTimeToLiveRequest<'a> {
-        pub request: pb::LeaseTimeToLiveRequest,
-        pub(crate) client: &'a mut LeaseClient,
-    }
-    impl<'a> DoLeaseTimeToLiveRequest<'a> {
-        pub fn from_client(client: &'a mut LeaseClient) -> Self {
-            DoLeaseTimeToLiveRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-        pub fn with_id(mut self, id: i64) -> Self {
-            self.request.id = id;
-            self
-        }
-        pub fn with_keys(mut self, keys: bool) -> Self {
-            self.request.keys = keys;
-            self
-        }
-    }
-    impl<'a> std::future::IntoFuture for DoLeaseTimeToLiveRequest<'a> {
-        type Output = Result<pb::LeaseTimeToLiveResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::LeaseTimeToLiveResponse>>
-                    + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoLeaseTimeToLiveRequest { request, client } = self;
-            Box::pin(async move { client.lease_time_to_live(request).await })
-        }
-    }
-    #[must_use]
-    pub struct DoLeaseLeasesRequest<'a> {
-        pub request: pb::LeaseLeasesRequest,
-        pub(crate) client: &'a mut LeaseClient,
-    }
-    impl<'a> DoLeaseLeasesRequest<'a> {
-        pub fn from_client(client: &'a mut LeaseClient) -> Self {
-            DoLeaseLeasesRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-    }
-    impl<'a> std::future::IntoFuture for DoLeaseLeasesRequest<'a> {
-        type Output = Result<pb::LeaseLeasesResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::LeaseLeasesResponse>>
-                    + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoLeaseLeasesRequest { request, client } = self;
-            Box::pin(async move { client.lease_leases(request).await })
-        }
     }
 }

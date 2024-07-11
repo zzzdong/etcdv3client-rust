@@ -3,10 +3,9 @@ use std::future::{Future, IntoFuture};
 use std::pin::Pin;
 
 use crate::error::{ErrKind, Error, Result};
+use crate::grpc::GrpcService;
 use crate::pb;
-use crate::transport::{GrpcService, Transport};
 use crate::utils::build_prefix_end;
-use crate::Client;
 
 use tokio::sync::mpsc::{channel, Sender};
 use tonic::codec::Streaming;
@@ -16,32 +15,33 @@ const MPSC_CHANNEL_SIZE: usize = 1;
 
 #[derive(Debug, Clone)]
 pub struct InnerWatchClient<S> {
-    transport: S,
+    service: S,
 }
 impl<S> InnerWatchClient<S>
 where
     S: GrpcService,
 {
-    pub fn new(transport: S) -> Self {
-        Self { transport }
+    pub fn new(service: S) -> Self {
+        Self { service }
     }
     pub async fn watch(
         &mut self,
         request: impl tonic::IntoStreamingRequest<Message = pb::WatchRequest>,
     ) -> Result<tonic::Response<tonic::codec::Streaming<pb::WatchResponse>>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Watch/Watch");
-        self.transport
+        self.service
             .streaming(request.into_streaming_request(), path)
             .await
     }
 }
-
 #[derive(Debug, Clone)]
-pub struct WatchClient {
-    inner: InnerWatchClient<Transport>,
+pub struct WatchClient<S> {
+    inner: InnerWatchClient<S>,
 }
-
-impl WatchClient {
+impl<S> WatchClient<S>
+where
+    S: GrpcService,
+{
     pub async fn watch(
         &mut self,
         request: impl tonic::IntoStreamingRequest<Message = pb::WatchRequest>,
@@ -53,28 +53,27 @@ impl WatchClient {
     }
 }
 
-impl WatchClient {
-    pub(crate) fn new(transport: Transport) -> Self {
+impl<S> WatchClient<S>
+where
+    S: GrpcService,
+{
+    pub fn new(service: S) -> Self {
         WatchClient {
-            inner: InnerWatchClient::new(transport),
+            inner: InnerWatchClient::new(service),
         }
-    }
-
-    pub fn with_client(client: &Client) -> Self {
-        Self::new(client.transport.clone())
     }
 
     /// do watch
     ///
     /// ```no_run
-    /// # use etcdv3client::{Client, Error, WatchClient};
+    /// # use etcdv3client::{EtcdClient, Error, WatchClient};
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
-    /// # let client = Client::new(vec!["localhost:2379"], None).await?;
-    /// let resp = WatchClient::with_client(&client).do_watch("hello").with_prefix().await.unwrap();
+    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
+    /// let resp = WatchClient::new(client.service()).do_watch("hello").with_prefix().await.unwrap();
     /// # Ok(())
     /// # }
-    pub fn do_watch(&mut self, key: impl Into<Vec<u8>>) -> DoCreateWatch {
+    pub fn do_watch(&mut self, key: impl Into<Vec<u8>>) -> DoCreateWatch<S> {
         DoCreateWatch::new(key, self)
     }
 
@@ -89,13 +88,16 @@ impl WatchClient {
     }
 }
 
-pub struct DoCreateWatch<'a> {
+pub struct DoCreateWatch<'a, S> {
     pub request: pb::WatchCreateRequest,
-    client: &'a mut WatchClient,
+    client: &'a mut WatchClient<S>,
 }
 
-impl<'a> DoCreateWatch<'a> {
-    pub fn new(key: impl Into<Vec<u8>>, client: &'a mut WatchClient) -> Self {
+impl<'a, S> DoCreateWatch<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn new(key: impl Into<Vec<u8>>, client: &'a mut WatchClient<S>) -> Self {
         DoCreateWatch {
             request: pb::WatchCreateRequest::new(key),
             client,
@@ -148,7 +150,7 @@ impl<'a> DoCreateWatch<'a> {
     }
 }
 
-impl<'a> fmt::Debug for DoCreateWatch<'a> {
+impl<'a, S> fmt::Debug for DoCreateWatch<'a, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DoCreateWatch")
             .field("request", &self.request)
@@ -156,7 +158,10 @@ impl<'a> fmt::Debug for DoCreateWatch<'a> {
     }
 }
 
-impl<'a> IntoFuture for DoCreateWatch<'a> {
+impl<'a, S> IntoFuture for DoCreateWatch<'a, S>
+where
+    S: GrpcService,
+{
     type Output = Result<Watcher>;
     type IntoFuture = Pin<Box<dyn Future<Output = Result<Watcher>> + Send + 'a>>;
 

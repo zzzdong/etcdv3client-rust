@@ -1,16 +1,16 @@
 //! A etcdv3 client written in Rust-lang.
 //!
 //! ```rust,no_run
-//! use etcdv3client::{Client, Error};
+//! use etcdv3client::{EtcdClient, Error};
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Error> {
 //!     let endpoint = "http://localhost:2379";
-//!     let auth: Option<(String, String)> = None;
-//!     let mut client = Client::new(vec![endpoint], auth).await?;
+//!     let auth = None;
+//!     let mut client = EtcdClient::new(vec![endpoint], auth).await?;
 //!
 //!     let key = "/hello";
-//!     // use convenience api under Client.
+//!     // use convenience api under EtcdClient.
 //!     match client.get(key).await {
 //!         Ok(v) => {
 //!             println!("got `{}` => {:?}", key, String::from_utf8_lossy(&v));
@@ -31,8 +31,8 @@
 
 mod client;
 mod error;
+pub mod grpc;
 pub mod pb;
-mod transport;
 mod utils;
 
 mod auth;
@@ -40,7 +40,7 @@ mod kv;
 mod lease;
 mod watch;
 
-pub use client::Client;
+pub use client::{Client, EtcdClient};
 pub use error::{ErrKind, Error};
 pub use kv::KvClient;
 pub use lease::{LeaseClient, LeaseKeepAliver};

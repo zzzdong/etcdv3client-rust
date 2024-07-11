@@ -1,66 +1,64 @@
 use crate::error::{ErrKind, Error, Result};
-use crate::pb::{self};
-use crate::transport::{GrpcService, Transport};
+use crate::grpc::GrpcService;
+use crate::pb;
 use crate::utils::build_prefix_end;
-use crate::Client;
-
-use helper::*;
 use tonic::IntoRequest;
 
 #[derive(Debug, Clone)]
 pub struct InnerKvClient<S> {
-    transport: S,
+    service: S,
 }
 impl<S> InnerKvClient<S>
 where
     S: GrpcService,
 {
-    pub fn new(transport: S) -> Self {
-        Self { transport }
+    pub fn new(service: S) -> Self {
+        Self { service }
     }
     pub async fn range(
         &mut self,
         request: impl tonic::IntoRequest<pb::RangeRequest>,
     ) -> Result<tonic::Response<pb::RangeResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.KV/Range");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn put(
         &mut self,
         request: impl tonic::IntoRequest<pb::PutRequest>,
     ) -> Result<tonic::Response<pb::PutResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.KV/Put");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn delete_range(
         &mut self,
         request: impl tonic::IntoRequest<pb::DeleteRangeRequest>,
     ) -> Result<tonic::Response<pb::DeleteRangeResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.KV/DeleteRange");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn txn(
         &mut self,
         request: impl tonic::IntoRequest<pb::TxnRequest>,
     ) -> Result<tonic::Response<pb::TxnResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.KV/Txn");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn compact(
         &mut self,
         request: impl tonic::IntoRequest<pb::CompactionRequest>,
     ) -> Result<tonic::Response<pb::CompactionResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.KV/Compact");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
 }
-
 #[derive(Debug, Clone)]
-pub struct KvClient {
-    inner: InnerKvClient<Transport>,
+pub struct KvClient<S> {
+    inner: InnerKvClient<S>,
 }
-
-impl KvClient {
+impl<S> KvClient<S>
+where
+    S: GrpcService,
+{
     pub async fn range(&mut self, request: pb::RangeRequest) -> Result<pb::RangeResponse> {
         self.inner
             .range(request.into_request())
@@ -99,30 +97,29 @@ impl KvClient {
     }
 }
 
-impl KvClient {
-    pub(crate) fn new(transport: Transport) -> Self {
+impl<S> KvClient<S>
+where
+    S: GrpcService,
+{
+    pub fn new(service: S) -> Self {
         KvClient {
-            inner: InnerKvClient::new(transport),
+            inner: InnerKvClient::new(service),
         }
-    }
-
-    pub fn with_client(client: &Client) -> Self {
-        Self::new(client.transport.clone())
     }
 
     /// Do range request
     ///
     /// ```no_run
-    /// # use etcdv3client::{Client, Error, KvClient};
+    /// # use etcdv3client::{EtcdClient, Error, KvClient};
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
-    /// # let client = Client::new(vec!["localhost:2379"], None).await?;
-    /// let resp = KvClient::with_client(&client).do_range("hello").with_prefix().await.unwrap();
+    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
+    /// let resp = KvClient::new(client.service()).do_range("hello").with_prefix().await.unwrap();
     /// # Ok(())
     /// # }
     /// ```
-    pub fn do_range(&mut self, key: impl Into<Vec<u8>>) -> DoRangeRequest {
-        DoRangeRequest::new(key, self)
+    pub fn do_range(&mut self, key: impl Into<Vec<u8>>) -> DoRangeRequest<S> {
+        pb::RangeRequest::new(key).build(self)
     }
 
     /// Get value by key
@@ -140,11 +137,11 @@ impl KvClient {
     /// Get string by key
     ///
     /// ```no_run
-    /// # use etcdv3client::{Client, Error, KvClient};
+    /// # use etcdv3client::{EtcdClient, Error, KvClient};
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
-    /// # let client = Client::new(vec!["localhost:2379"], None).await?;
-    /// let resp = KvClient::with_client(&client).get("hello").await.unwrap();
+    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
+    /// let resp = KvClient::new(client.service()).get("hello").await.unwrap();
     /// # Ok(())
     /// # }
     /// ```
@@ -174,15 +171,19 @@ impl KvClient {
     /// Do put request
     ///
     /// ```no_run
-    /// # use etcdv3client::{Client, Error, KvClient, pb};
+    /// # use etcdv3client::{EtcdClient, Error, KvClient, pb};
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
-    /// # let client = Client::new(vec!["localhost:2379"], None).await?;
-    /// let resp = KvClient::with_client(&client).do_put("hello", "world").with_prev_kv(true).await.unwrap();
+    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
+    /// let resp = KvClient::new(client.service()).do_put("hello", "world").with_prev_kv(true).await.unwrap();
     /// # Ok(())
     /// # }
-    pub fn do_put(&mut self, key: impl Into<Vec<u8>>, value: impl Into<Vec<u8>>) -> DoPutRequest {
-        DoPutRequest::new(key, value, self)
+    pub fn do_put(
+        &mut self,
+        key: impl Into<Vec<u8>>,
+        value: impl Into<Vec<u8>>,
+    ) -> DoPutRequest<S> {
+        pb::PutRequest::new(key, value).build(self)
     }
 
     /// Put a key-value paire
@@ -197,15 +198,15 @@ impl KvClient {
     /// Do delete range request
     ///
     /// ```no_run
-    /// # use etcdv3client::{Client, Error, KvClient, pb};
+    /// # use etcdv3client::{EtcdClient, Error, KvClient, pb};
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
-    /// # let client = Client::new(vec!["localhost:2379"], None).await?;
-    /// let resp = KvClient::with_client(&client).do_delete_range("hello").with_prefix().await.unwrap();
+    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
+    /// let resp = KvClient::new(client.service()).do_delete_range("hello").with_prefix().await.unwrap();
     /// # Ok(())
     /// # }
-    pub fn do_delete_range(&mut self, key: impl Into<Vec<u8>>) -> DoDeleteRangeRequest {
-        DoDeleteRangeRequest::new(key, self)
+    pub fn do_delete_range(&mut self, key: impl Into<Vec<u8>>) -> DoDeleteRangeRequest<S> {
+        pb::DeleteRangeRequest::new(key).build(self)
     }
 
     /// Delete a key-value paire
@@ -213,12 +214,12 @@ impl KvClient {
         self.do_delete_range(key).await.map(|_| ())
     }
 
-    pub fn do_txn(&mut self) -> DoTxnRequest {
-        DoTxnRequest::new(self)
+    pub fn do_txn(&mut self) -> DoTxnRequest<S> {
+        pb::TxnRequest::default().build(self)
     }
 
-    pub fn do_compaction(&mut self, revision: i64, physical: bool) -> DoCompactionRequest {
-        DoCompactionRequest::new(revision, physical, self)
+    pub fn do_compaction(&mut self, revision: i64, physical: bool) -> DoCompactionRequest<S> {
+        pb::CompactionRequest::new(revision, physical).build(self)
     }
 
     /// Compact compacts the event history in the etcd key-value store.
@@ -235,23 +236,106 @@ impl pb::RangeRequest {
             ..Default::default()
         }
     }
-}
 
-impl<'a> DoRangeRequest<'a> {
-    pub fn new(key: impl Into<Vec<u8>>, client: &'a mut KvClient) -> Self {
+    /// Set key prefix.
+    pub fn with_prefix(mut self) -> Self {
+        self.range_end = build_prefix_end(&self.key);
+        self
+    }
+
+    pub fn build<S: GrpcService>(self, client: &mut KvClient<S>) -> DoRangeRequest<'_, S> {
         DoRangeRequest {
-            request: pb::RangeRequest::new(key),
+            request: self,
             client,
         }
     }
+}
+#[must_use]
+pub struct DoRangeRequest<'a, S> {
+    pub request: pb::RangeRequest,
+    pub(crate) client: &'a mut KvClient<S>,
+}
+impl<'a, S> DoRangeRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut KvClient<S>) -> Self {
+        self.client = client;
+        self
+    }
 
-    /// Get with key prefix.
+    /// Set key prefix.
     pub fn with_prefix(mut self) -> Self {
-        self.request.range_end = build_prefix_end(&self.request.key);
+        self.request = self.request.with_prefix();
+        self
+    }
+
+    pub fn with_key(mut self, key: Vec<u8>) -> Self {
+        self.request.key = key;
+        self
+    }
+    pub fn with_range_end(mut self, range_end: Vec<u8>) -> Self {
+        self.request.range_end = range_end;
+        self
+    }
+    pub fn with_limit(mut self, limit: i64) -> Self {
+        self.request.limit = limit;
+        self
+    }
+    pub fn with_revision(mut self, revision: i64) -> Self {
+        self.request.revision = revision;
+        self
+    }
+    pub fn with_sort_order(mut self, sort_order: i32) -> Self {
+        self.request.sort_order = sort_order;
+        self
+    }
+    pub fn with_sort_target(mut self, sort_target: i32) -> Self {
+        self.request.sort_target = sort_target;
+        self
+    }
+    pub fn with_serializable(mut self, serializable: bool) -> Self {
+        self.request.serializable = serializable;
+        self
+    }
+    pub fn with_keys_only(mut self, keys_only: bool) -> Self {
+        self.request.keys_only = keys_only;
+        self
+    }
+    pub fn with_count_only(mut self, count_only: bool) -> Self {
+        self.request.count_only = count_only;
+        self
+    }
+    pub fn with_min_mod_revision(mut self, min_mod_revision: i64) -> Self {
+        self.request.min_mod_revision = min_mod_revision;
+        self
+    }
+    pub fn with_max_mod_revision(mut self, max_mod_revision: i64) -> Self {
+        self.request.max_mod_revision = max_mod_revision;
+        self
+    }
+    pub fn with_min_create_revision(mut self, min_create_revision: i64) -> Self {
+        self.request.min_create_revision = min_create_revision;
+        self
+    }
+    pub fn with_max_create_revision(mut self, max_create_revision: i64) -> Self {
+        self.request.max_create_revision = max_create_revision;
         self
     }
 }
-
+impl<'a, S> std::future::IntoFuture for DoRangeRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::RangeResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::RangeResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoRangeRequest { request, client } = self;
+        Box::pin(async move { client.range(request).await })
+    }
+}
 impl pb::PutRequest {
     pub fn new(key: impl Into<Vec<u8>>, value: impl Into<Vec<u8>>) -> Self {
         pb::PutRequest {
@@ -260,18 +344,63 @@ impl pb::PutRequest {
             ..Default::default()
         }
     }
-}
 
-impl<'a> DoPutRequest<'a> {
-    pub fn new(
-        key: impl Into<Vec<u8>>,
-        value: impl Into<Vec<u8>>,
-        client: &'a mut KvClient,
-    ) -> Self {
+    pub fn build<S: GrpcService>(self, client: &mut KvClient<S>) -> DoPutRequest<'_, S> {
         DoPutRequest {
-            request: pb::PutRequest::new(key, value),
+            request: self,
             client,
         }
+    }
+}
+#[must_use]
+pub struct DoPutRequest<'a, S> {
+    pub request: pb::PutRequest,
+    pub(crate) client: &'a mut KvClient<S>,
+}
+impl<'a, S> DoPutRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut KvClient<S>) -> Self {
+        self.client = client;
+        self
+    }
+    pub fn with_key(mut self, key: Vec<u8>) -> Self {
+        self.request.key = key;
+        self
+    }
+    pub fn with_value(mut self, value: Vec<u8>) -> Self {
+        self.request.value = value;
+        self
+    }
+    pub fn with_lease(mut self, lease: i64) -> Self {
+        self.request.lease = lease;
+        self
+    }
+    pub fn with_prev_kv(mut self, prev_kv: bool) -> Self {
+        self.request.prev_kv = prev_kv;
+        self
+    }
+    pub fn with_ignore_value(mut self, ignore_value: bool) -> Self {
+        self.request.ignore_value = ignore_value;
+        self
+    }
+    pub fn with_ignore_lease(mut self, ignore_lease: bool) -> Self {
+        self.request.ignore_lease = ignore_lease;
+        self
+    }
+}
+impl<'a, S> std::future::IntoFuture for DoPutRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::PutResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::PutResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoPutRequest { request, client } = self;
+        Box::pin(async move { client.put(request).await })
     }
 }
 
@@ -282,20 +411,95 @@ impl pb::DeleteRangeRequest {
             ..Default::default()
         }
     }
-}
 
-impl<'a> DoDeleteRangeRequest<'a> {
-    pub fn new(key: impl Into<Vec<u8>>, client: &'a mut KvClient) -> Self {
+    pub fn build<S: GrpcService>(self, client: &mut KvClient<S>) -> DoDeleteRangeRequest<'_, S> {
         DoDeleteRangeRequest {
-            request: pb::DeleteRangeRequest::new(key),
+            request: self,
             client,
         }
+    }
+}
+#[must_use]
+pub struct DoDeleteRangeRequest<'a, S> {
+    pub request: pb::DeleteRangeRequest,
+    pub(crate) client: &'a mut KvClient<S>,
+}
+impl<'a, S> DoDeleteRangeRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut KvClient<S>) -> Self {
+        self.client = client;
+        self
+    }
+
+    pub fn with_key(mut self, key: Vec<u8>) -> Self {
+        self.request.key = key;
+        self
     }
 
     /// Delete key-value pairs with key prefix.
     pub fn with_prefix(mut self) -> Self {
         self.request.range_end = build_prefix_end(&self.request.key);
         self
+    }
+
+    pub fn with_range_end(mut self, range_end: Vec<u8>) -> Self {
+        self.request.range_end = range_end;
+        self
+    }
+    pub fn with_prev_kv(mut self, prev_kv: bool) -> Self {
+        self.request.prev_kv = prev_kv;
+        self
+    }
+}
+impl<'a, S> std::future::IntoFuture for DoDeleteRangeRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::DeleteRangeResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::DeleteRangeResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoDeleteRangeRequest { request, client } = self;
+        Box::pin(async move { client.delete_range(request).await })
+    }
+}
+
+impl From<pb::RangeRequest> for pb::RequestOp {
+    fn from(request: pb::RangeRequest) -> Self {
+        let request_op = pb::request_op::Request::RequestRange(request);
+        pb::RequestOp {
+            request: Some(request_op),
+        }
+    }
+}
+
+impl From<pb::PutRequest> for pb::RequestOp {
+    fn from(request: pb::PutRequest) -> Self {
+        let request_op = pb::request_op::Request::RequestPut(request);
+        pb::RequestOp {
+            request: Some(request_op),
+        }
+    }
+}
+
+impl From<pb::DeleteRangeRequest> for pb::RequestOp {
+    fn from(request: pb::DeleteRangeRequest) -> Self {
+        let request_op = pb::request_op::Request::RequestDeleteRange(request);
+        pb::RequestOp {
+            request: Some(request_op),
+        }
+    }
+}
+
+impl From<pb::TxnRequest> for pb::RequestOp {
+    fn from(request: pb::TxnRequest) -> Self {
+        let request_op = pb::request_op::Request::RequestTxn(request);
+        pb::RequestOp {
+            request: Some(request_op),
+        }
     }
 }
 
@@ -356,54 +560,23 @@ impl pb::TxnRequest {
         self.failure = ops;
         self
     }
-}
 
-impl From<pb::RangeRequest> for pb::RequestOp {
-    fn from(request: pb::RangeRequest) -> Self {
-        let request_op = pb::request_op::Request::RequestRange(request);
-        pb::RequestOp {
-            request: Some(request_op),
-        }
-    }
-}
-
-impl From<pb::PutRequest> for pb::RequestOp {
-    fn from(request: pb::PutRequest) -> Self {
-        let request_op = pb::request_op::Request::RequestPut(request);
-        pb::RequestOp {
-            request: Some(request_op),
-        }
-    }
-}
-
-impl From<pb::DeleteRangeRequest> for pb::RequestOp {
-    fn from(request: pb::DeleteRangeRequest) -> Self {
-        let request_op = pb::request_op::Request::RequestDeleteRange(request);
-        pb::RequestOp {
-            request: Some(request_op),
-        }
-    }
-}
-
-impl From<pb::TxnRequest> for pb::RequestOp {
-    fn from(request: pb::TxnRequest) -> Self {
-        let request_op = pb::request_op::Request::RequestTxn(request);
-        pb::RequestOp {
-            request: Some(request_op),
-        }
-    }
-}
-
-impl<'a> DoTxnRequest<'a> {
-    pub fn new(client: &'a mut KvClient) -> Self {
+    pub fn build<S: GrpcService>(self, client: &mut KvClient<S>) -> DoTxnRequest<'_, S> {
         DoTxnRequest {
-            request: pb::TxnRequest {
-                ..Default::default()
-            },
+            request: self,
             client,
         }
     }
-
+}
+#[must_use]
+pub struct DoTxnRequest<'a, S> {
+    pub request: pb::TxnRequest,
+    pub(crate) client: &'a mut KvClient<S>,
+}
+impl<'a, S> DoTxnRequest<'a, S>
+where
+    S: GrpcService,
+{
     pub fn with_if(mut self, cmps: Vec<pb::Compare>) -> Self {
         self.request = self.request.with_if(cmps);
         self
@@ -418,255 +591,69 @@ impl<'a> DoTxnRequest<'a> {
         self.request = self.request.with_else(ops);
         self
     }
-}
 
+    pub fn with_client(mut self, client: &'a mut KvClient<S>) -> Self {
+        self.client = client;
+        self
+    }
+}
+impl<'a, S> std::future::IntoFuture for DoTxnRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::TxnResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::TxnResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoTxnRequest { request, client } = self;
+        Box::pin(async move { client.txn(request).await })
+    }
+}
 impl pb::CompactionRequest {
     pub fn new(revision: i64, physical: bool) -> Self {
         pb::CompactionRequest { revision, physical }
     }
-}
 
-impl<'a> DoCompactionRequest<'a> {
-    pub fn new(revision: i64, physical: bool, client: &'a mut KvClient) -> Self {
+    pub fn build<S: GrpcService>(self, client: &mut KvClient<S>) -> DoCompactionRequest<'_, S> {
         DoCompactionRequest {
-            request: pb::CompactionRequest::new(revision, physical),
+            request: self,
             client,
         }
     }
 }
-
-pub mod helper {
-    #![allow(dead_code)]
-
-    use crate::error::Result;
-    use crate::kv::KvClient;
-    use crate::pb;
-
-    #[must_use]
-    pub struct DoRangeRequest<'a> {
-        pub request: pb::RangeRequest,
-        pub(crate) client: &'a mut KvClient,
+#[must_use]
+pub struct DoCompactionRequest<'a, S> {
+    pub request: pb::CompactionRequest,
+    pub(crate) client: &'a mut KvClient<S>,
+}
+impl<'a, S> DoCompactionRequest<'a, S>
+where
+    S: GrpcService,
+{
+    pub fn with_client(mut self, client: &'a mut KvClient<S>) -> Self {
+        self.client = client;
+        self
     }
-    impl<'a> DoRangeRequest<'a> {
-        pub fn from_client(client: &'a mut KvClient) -> Self {
-            DoRangeRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-        pub fn with_key(mut self, key: Vec<u8>) -> Self {
-            self.request.key = key;
-            self
-        }
-        pub fn with_range_end(mut self, range_end: Vec<u8>) -> Self {
-            self.request.range_end = range_end;
-            self
-        }
-        pub fn with_limit(mut self, limit: i64) -> Self {
-            self.request.limit = limit;
-            self
-        }
-        pub fn with_revision(mut self, revision: i64) -> Self {
-            self.request.revision = revision;
-            self
-        }
-        pub fn with_sort_order(mut self, sort_order: i32) -> Self {
-            self.request.sort_order = sort_order;
-            self
-        }
-        pub fn with_sort_target(mut self, sort_target: i32) -> Self {
-            self.request.sort_target = sort_target;
-            self
-        }
-        pub fn with_serializable(mut self, serializable: bool) -> Self {
-            self.request.serializable = serializable;
-            self
-        }
-        pub fn with_keys_only(mut self, keys_only: bool) -> Self {
-            self.request.keys_only = keys_only;
-            self
-        }
-        pub fn with_count_only(mut self, count_only: bool) -> Self {
-            self.request.count_only = count_only;
-            self
-        }
-        pub fn with_min_mod_revision(mut self, min_mod_revision: i64) -> Self {
-            self.request.min_mod_revision = min_mod_revision;
-            self
-        }
-        pub fn with_max_mod_revision(mut self, max_mod_revision: i64) -> Self {
-            self.request.max_mod_revision = max_mod_revision;
-            self
-        }
-        pub fn with_min_create_revision(mut self, min_create_revision: i64) -> Self {
-            self.request.min_create_revision = min_create_revision;
-            self
-        }
-        pub fn with_max_create_revision(mut self, max_create_revision: i64) -> Self {
-            self.request.max_create_revision = max_create_revision;
-            self
-        }
+    pub fn with_revision(mut self, revision: i64) -> Self {
+        self.request.revision = revision;
+        self
     }
-    impl<'a> std::future::IntoFuture for DoRangeRequest<'a> {
-        type Output = Result<pb::RangeResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::RangeResponse>>
-                    + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoRangeRequest { request, client } = self;
-            Box::pin(async move { client.range(request).await })
-        }
+    pub fn with_physical(mut self, physical: bool) -> Self {
+        self.request.physical = physical;
+        self
     }
-    #[must_use]
-    pub struct DoPutRequest<'a> {
-        pub request: pb::PutRequest,
-        pub(crate) client: &'a mut KvClient,
-    }
-    impl<'a> DoPutRequest<'a> {
-        pub fn from_client(client: &'a mut KvClient) -> Self {
-            DoPutRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-        pub fn with_key(mut self, key: Vec<u8>) -> Self {
-            self.request.key = key;
-            self
-        }
-        pub fn with_value(mut self, value: Vec<u8>) -> Self {
-            self.request.value = value;
-            self
-        }
-        pub fn with_lease(mut self, lease: i64) -> Self {
-            self.request.lease = lease;
-            self
-        }
-        pub fn with_prev_kv(mut self, prev_kv: bool) -> Self {
-            self.request.prev_kv = prev_kv;
-            self
-        }
-        pub fn with_ignore_value(mut self, ignore_value: bool) -> Self {
-            self.request.ignore_value = ignore_value;
-            self
-        }
-        pub fn with_ignore_lease(mut self, ignore_lease: bool) -> Self {
-            self.request.ignore_lease = ignore_lease;
-            self
-        }
-    }
-    impl<'a> std::future::IntoFuture for DoPutRequest<'a> {
-        type Output = Result<pb::PutResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::PutResponse>> + Send + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoPutRequest { request, client } = self;
-            Box::pin(async move { client.put(request).await })
-        }
-    }
-    #[must_use]
-    pub struct DoDeleteRangeRequest<'a> {
-        pub request: pb::DeleteRangeRequest,
-        pub(crate) client: &'a mut KvClient,
-    }
-    impl<'a> DoDeleteRangeRequest<'a> {
-        pub fn from_client(client: &'a mut KvClient) -> Self {
-            DoDeleteRangeRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-        pub fn with_key(mut self, key: Vec<u8>) -> Self {
-            self.request.key = key;
-            self
-        }
-        pub fn with_range_end(mut self, range_end: Vec<u8>) -> Self {
-            self.request.range_end = range_end;
-            self
-        }
-        pub fn with_prev_kv(mut self, prev_kv: bool) -> Self {
-            self.request.prev_kv = prev_kv;
-            self
-        }
-    }
-    impl<'a> std::future::IntoFuture for DoDeleteRangeRequest<'a> {
-        type Output = Result<pb::DeleteRangeResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::DeleteRangeResponse>>
-                    + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoDeleteRangeRequest { request, client } = self;
-            Box::pin(async move { client.delete_range(request).await })
-        }
-    }
-    #[must_use]
-    pub struct DoTxnRequest<'a> {
-        pub request: pb::TxnRequest,
-        pub(crate) client: &'a mut KvClient,
-    }
-    impl<'a> DoTxnRequest<'a> {
-        pub fn from_client(client: &'a mut KvClient) -> Self {
-            DoTxnRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-    }
-    impl<'a> std::future::IntoFuture for DoTxnRequest<'a> {
-        type Output = Result<pb::TxnResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::TxnResponse>> + Send + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoTxnRequest { request, client } = self;
-            Box::pin(async move { client.txn(request).await })
-        }
-    }
-    #[must_use]
-    pub struct DoCompactionRequest<'a> {
-        pub request: pb::CompactionRequest,
-        pub(crate) client: &'a mut KvClient,
-    }
-    impl<'a> DoCompactionRequest<'a> {
-        pub fn from_client(client: &'a mut KvClient) -> Self {
-            DoCompactionRequest {
-                request: Default::default(),
-                client,
-            }
-        }
-        pub fn with_revision(mut self, revision: i64) -> Self {
-            self.request.revision = revision;
-            self
-        }
-        pub fn with_physical(mut self, physical: bool) -> Self {
-            self.request.physical = physical;
-            self
-        }
-    }
-    impl<'a> std::future::IntoFuture for DoCompactionRequest<'a> {
-        type Output = Result<pb::CompactionResponse>;
-        type IntoFuture = std::pin::Pin<
-            Box<
-                dyn std::future::Future<Output = crate::error::Result<pb::CompactionResponse>>
-                    + Send
-                    + 'a,
-            >,
-        >;
-        fn into_future(self) -> Self::IntoFuture {
-            let DoCompactionRequest { request, client } = self;
-            Box::pin(async move { client.compact(request).await })
-        }
+}
+impl<'a, S> std::future::IntoFuture for DoCompactionRequest<'a, S>
+where
+    S: GrpcService,
+{
+    type Output = Result<pb::CompactionResponse>;
+    type IntoFuture = std::pin::Pin<
+        Box<dyn std::future::Future<Output = crate::error::Result<pb::CompactionResponse>> + 'a>,
+    >;
+    fn into_future(self) -> Self::IntoFuture {
+        let DoCompactionRequest { request, client } = self;
+        Box::pin(async move { client.compact(request).await })
     }
 }
