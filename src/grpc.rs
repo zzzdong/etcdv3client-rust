@@ -1,6 +1,6 @@
 use http::uri::PathAndQuery;
 use std::future::Future;
-use tonic::{metadata::AsciiMetadataValue, Extensions};
+use tonic::metadata::AsciiMetadataValue;
 
 use crate::{auth::InnerAuthClient, error::Result, utils::TOKEN_FIELD_NAME};
 
@@ -318,12 +318,11 @@ where
     }
 
     /// Clone request.
-    /// Note: the cloned request will lost Extensions!
     fn clone_request<M: Clone>(req: tonic::Request<M>) -> (tonic::Request<M>, tonic::Request<M>) {
         let (metadata, extensions, message) = req.into_parts();
 
         let req_cloned =
-            tonic::Request::from_parts(metadata.clone(), Extensions::default(), message.clone());
+            tonic::Request::from_parts(metadata.clone(), extensions.clone(), message.clone());
         let req = tonic::Request::from_parts(metadata, extensions, message);
 
         (req, req_cloned)
