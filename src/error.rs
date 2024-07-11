@@ -111,6 +111,10 @@ impl Error {
         self.kind == ErrKind::InvalidAuthToken
     }
 
+    pub fn is_auth_not_enabled(&self) -> bool {
+        self.kind == ErrKind::AuthNotEnabled
+    }
+
     pub fn should_refresh_token(&self) -> bool {
         self.kind == ErrKind::InvalidAuthToken || self.kind == ErrKind::AuthOldRevision
     }

@@ -1,3 +1,5 @@
+pub(crate) const TOKEN_FIELD_NAME: &str = "token";
+
 pub fn build_prefix_end(prefix: impl AsRef<[u8]>) -> Vec<u8> {
     const NO_PREFIX_END: Vec<u8> = Vec::new();
 

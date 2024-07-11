@@ -1,17 +1,15 @@
-use crate::error::{ErrKind, Error, Result};
-use crate::pb;
-use crate::transport::{CredentialInterceptor, GrpcService};
-
 use crate::auth::{AuthClient, InnerAuthClient};
+use crate::error::{ErrKind, Error, Result};
+use crate::grpc::{CredentialInterceptor, GrpcService, TonicClient};
 use crate::kv::KvClient;
 use crate::lease::{LeaseClient, LeaseKeepAliver};
-use crate::transport::GrpcClient;
+use crate::pb;
 use crate::watch::{WatchClient, Watcher};
 
 use http::Uri;
 use tonic::transport::{channel::Channel, Endpoint};
 
-pub type SimpleClient = Client<CredentialInterceptor<GrpcClient>>;
+pub type EtcdClient = Client<CredentialInterceptor<TonicClient>>;
 
 #[derive(Debug, Clone)]
 pub struct Client<S> {
@@ -23,7 +21,7 @@ pub struct Client<S> {
     pub(crate) service: S,
 }
 
-impl SimpleClient {
+impl Client<CredentialInterceptor<TonicClient>> {
     /// Create a new Client
     pub async fn new<U>(
         endpoints: impl Into<Vec<U>>,
@@ -59,30 +57,24 @@ impl SimpleClient {
         };
 
         let channel = new_channel(ep_uris).await?;
-        let service = CredentialInterceptor::new(credential, token, GrpcClient::new(channel));
+        let service = CredentialInterceptor::new(credential, token, TonicClient::new(channel));
 
-        Ok(Client {
+        Ok(Client::with_service(service))
+    }
+}
+
+impl<S: GrpcService> Client<S> {
+    pub fn service(&self) -> S {
+        self.service.clone()
+    }
+
+    pub fn with_service(service: S) -> Self {
+        Client {
             auth: AuthClient::new(service.clone()),
             kv: KvClient::new(service.clone()),
             watch: WatchClient::new(service.clone()),
             lease: LeaseClient::new(service.clone()),
             service,
-        })
-    }
-}
-
-impl<S: GrpcService + Send + Clone> Client<S> {
-    pub fn service(&self) -> S {
-        self.service.clone()
-    }
-
-    pub fn with_service(transport: S) -> Self {
-        Client {
-            auth: AuthClient::new(transport.clone()),
-            kv: KvClient::new(transport.clone()),
-            watch: WatchClient::new(transport.clone()),
-            lease: LeaseClient::new(transport.clone()),
-            service: transport,
         }
     }
 
@@ -177,11 +169,13 @@ impl<S: GrpcService + Send + Clone> Client<S> {
     // }
 }
 
+
+
 async fn get_token(endpoints: &[Uri], name: &str, password: &str) -> Result<String> {
     for ep in endpoints {
         let channel = connect_to(ep.to_owned()).await?;
 
-        let mut auth_client = InnerAuthClient::new(GrpcClient::new(channel));
+        let mut auth_client = InnerAuthClient::new(TonicClient::new(channel));
 
         match auth_client
             .get_token(name.to_string(), password.to_string())

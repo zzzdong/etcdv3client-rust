@@ -1,54 +1,54 @@
 use crate::error::{ErrKind, Error, Result};
-use crate::pb::{self};
-use crate::transport::GrpcService;
+use crate::grpc::GrpcService;
+use crate::pb;
 use crate::utils::build_prefix_end;
 use tonic::IntoRequest;
 
 #[derive(Debug, Clone)]
 pub struct InnerKvClient<S> {
-    transport: S,
+    service: S,
 }
 impl<S> InnerKvClient<S>
 where
     S: GrpcService,
 {
-    pub fn new(transport: S) -> Self {
-        Self { transport }
+    pub fn new(service: S) -> Self {
+        Self { service }
     }
     pub async fn range(
         &mut self,
         request: impl tonic::IntoRequest<pb::RangeRequest>,
     ) -> Result<tonic::Response<pb::RangeResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.KV/Range");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn put(
         &mut self,
         request: impl tonic::IntoRequest<pb::PutRequest>,
     ) -> Result<tonic::Response<pb::PutResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.KV/Put");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn delete_range(
         &mut self,
         request: impl tonic::IntoRequest<pb::DeleteRangeRequest>,
     ) -> Result<tonic::Response<pb::DeleteRangeResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.KV/DeleteRange");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn txn(
         &mut self,
         request: impl tonic::IntoRequest<pb::TxnRequest>,
     ) -> Result<tonic::Response<pb::TxnResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.KV/Txn");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn compact(
         &mut self,
         request: impl tonic::IntoRequest<pb::CompactionRequest>,
     ) -> Result<tonic::Response<pb::CompactionResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.KV/Compact");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
 }
 #[derive(Debug, Clone)]
@@ -101,24 +101,20 @@ impl<S> KvClient<S>
 where
     S: GrpcService,
 {
-    pub(crate) fn new(transport: S) -> Self {
+    pub fn new(service: S) -> Self {
         KvClient {
-            inner: InnerKvClient::new(transport),
+            inner: InnerKvClient::new(service),
         }
     }
-
-    // pub fn with_client(client: &Client) -> Self {
-    //     Self::new(client.transport.clone())
-    // }
 
     /// Do range request
     ///
     /// ```no_run
-    /// # use etcdv3client::{Client, Error, KvClient};
+    /// # use etcdv3client::{EtcdClient, Error, KvClient};
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
-    /// # let client = Client::new(vec!["localhost:2379"], None).await?;
-    /// let resp = KvClient::with_client(&client).do_range("hello").with_prefix().await.unwrap();
+    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
+    /// let resp = KvClient::new(client.service()).do_range("hello").with_prefix().await.unwrap();
     /// # Ok(())
     /// # }
     /// ```
@@ -141,11 +137,11 @@ where
     /// Get string by key
     ///
     /// ```no_run
-    /// # use etcdv3client::{Client, Error, KvClient};
+    /// # use etcdv3client::{EtcdClient, Error, KvClient};
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
-    /// # let client = Client::new(vec!["localhost:2379"], None).await?;
-    /// let resp = KvClient::with_client(&client).get("hello").await.unwrap();
+    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
+    /// let resp = KvClient::new(client.service()).get("hello").await.unwrap();
     /// # Ok(())
     /// # }
     /// ```
@@ -175,11 +171,11 @@ where
     /// Do put request
     ///
     /// ```no_run
-    /// # use etcdv3client::{Client, Error, KvClient, pb};
+    /// # use etcdv3client::{EtcdClient, Error, KvClient, pb};
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
-    /// # let client = Client::new(vec!["localhost:2379"], None).await?;
-    /// let resp = KvClient::with_client(&client).do_put("hello", "world").with_prev_kv(true).await.unwrap();
+    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
+    /// let resp = KvClient::new(client.service()).do_put("hello", "world").with_prev_kv(true).await.unwrap();
     /// # Ok(())
     /// # }
     pub fn do_put(
@@ -202,11 +198,11 @@ where
     /// Do delete range request
     ///
     /// ```no_run
-    /// # use etcdv3client::{Client, Error, KvClient, pb};
+    /// # use etcdv3client::{EtcdClient, Error, KvClient, pb};
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
-    /// # let client = Client::new(vec!["localhost:2379"], None).await?;
-    /// let resp = KvClient::with_client(&client).do_delete_range("hello").with_prefix().await.unwrap();
+    /// # let client = EtcdClient::new(vec!["localhost:2379"], None).await?;
+    /// let resp = KvClient::new(client.service()).do_delete_range("hello").with_prefix().await.unwrap();
     /// # Ok(())
     /// # }
     pub fn do_delete_range(&mut self, key: impl Into<Vec<u8>>) -> DoDeleteRangeRequest<S> {

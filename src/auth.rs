@@ -1,138 +1,138 @@
 use crate::error::Result;
-use crate::pb::{self};
-use crate::transport::GrpcService;
+use crate::grpc::GrpcService;
+use crate::pb;
 
 use tonic::IntoRequest;
 
 #[derive(Debug, Clone)]
 pub struct InnerAuthClient<S> {
-    transport: S,
+    service: S,
 }
 impl<S> InnerAuthClient<S>
 where
     S: GrpcService,
 {
-    pub fn new(transport: S) -> Self {
-        Self { transport }
+    pub fn new(service: S) -> Self {
+        Self { service }
     }
     pub async fn auth_enable(
         &mut self,
         request: impl tonic::IntoRequest<pb::AuthEnableRequest>,
     ) -> Result<tonic::Response<pb::AuthEnableResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/AuthEnable");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn auth_disable(
         &mut self,
         request: impl tonic::IntoRequest<pb::AuthDisableRequest>,
     ) -> Result<tonic::Response<pb::AuthDisableResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/AuthDisable");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn auth_status(
         &mut self,
         request: impl tonic::IntoRequest<pb::AuthStatusRequest>,
     ) -> Result<tonic::Response<pb::AuthStatusResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/AuthStatus");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn authenticate(
         &mut self,
         request: impl tonic::IntoRequest<pb::AuthenticateRequest>,
     ) -> Result<tonic::Response<pb::AuthenticateResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/Authenticate");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn user_add(
         &mut self,
         request: impl tonic::IntoRequest<pb::AuthUserAddRequest>,
     ) -> Result<tonic::Response<pb::AuthUserAddResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/UserAdd");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn user_get(
         &mut self,
         request: impl tonic::IntoRequest<pb::AuthUserGetRequest>,
     ) -> Result<tonic::Response<pb::AuthUserGetResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/UserGet");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn user_list(
         &mut self,
         request: impl tonic::IntoRequest<pb::AuthUserListRequest>,
     ) -> Result<tonic::Response<pb::AuthUserListResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/UserList");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn user_delete(
         &mut self,
         request: impl tonic::IntoRequest<pb::AuthUserDeleteRequest>,
     ) -> Result<tonic::Response<pb::AuthUserDeleteResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/UserDelete");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn user_change_password(
         &mut self,
         request: impl tonic::IntoRequest<pb::AuthUserChangePasswordRequest>,
     ) -> Result<tonic::Response<pb::AuthUserChangePasswordResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/UserChangePassword");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn user_grant_role(
         &mut self,
         request: impl tonic::IntoRequest<pb::AuthUserGrantRoleRequest>,
     ) -> Result<tonic::Response<pb::AuthUserGrantRoleResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/UserGrantRole");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn user_revoke_role(
         &mut self,
         request: impl tonic::IntoRequest<pb::AuthUserRevokeRoleRequest>,
     ) -> Result<tonic::Response<pb::AuthUserRevokeRoleResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/UserRevokeRole");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn role_add(
         &mut self,
         request: impl tonic::IntoRequest<pb::AuthRoleAddRequest>,
     ) -> Result<tonic::Response<pb::AuthRoleAddResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/RoleAdd");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn role_get(
         &mut self,
         request: impl tonic::IntoRequest<pb::AuthRoleGetRequest>,
     ) -> Result<tonic::Response<pb::AuthRoleGetResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/RoleGet");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn role_list(
         &mut self,
         request: impl tonic::IntoRequest<pb::AuthRoleListRequest>,
     ) -> Result<tonic::Response<pb::AuthRoleListResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/RoleList");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn role_delete(
         &mut self,
         request: impl tonic::IntoRequest<pb::AuthRoleDeleteRequest>,
     ) -> Result<tonic::Response<pb::AuthRoleDeleteResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/RoleDelete");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn role_grant_permission(
         &mut self,
         request: impl tonic::IntoRequest<pb::AuthRoleGrantPermissionRequest>,
     ) -> Result<tonic::Response<pb::AuthRoleGrantPermissionResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/RoleGrantPermission");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn role_revoke_permission(
         &mut self,
         request: impl tonic::IntoRequest<pb::AuthRoleRevokePermissionRequest>,
     ) -> Result<tonic::Response<pb::AuthRoleRevokePermissionResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Auth/RoleRevokePermission");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
 
     pub async fn get_token(
@@ -315,9 +315,9 @@ impl<S> AuthClient<S>
 where
     S: GrpcService,
 {
-    pub(crate) fn new(transport: S) -> Self {
+    pub(crate) fn new(service: S) -> Self {
         AuthClient {
-            inner: InnerAuthClient::new(transport),
+            inner: InnerAuthClient::new(service),
         }
     }
 

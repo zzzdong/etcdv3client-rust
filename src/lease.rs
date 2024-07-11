@@ -8,42 +8,42 @@ use tonic::IntoRequest;
 use tonic::IntoStreamingRequest;
 
 use crate::error::{ErrKind, Error, Result};
-use crate::pb::{self};
-use crate::transport::GrpcService;
+use crate::grpc::GrpcService;
+use crate::pb;
 
 const MPSC_CHANNEL_SIZE: usize = 1;
 
 #[derive(Debug, Clone)]
 pub struct InnerLeaseClient<S> {
-    transport: S,
+    service: S,
 }
 impl<S> InnerLeaseClient<S>
 where
     S: GrpcService,
 {
-    pub fn new(transport: S) -> Self {
-        Self { transport }
+    pub fn new(service: S) -> Self {
+        Self { service }
     }
     pub async fn lease_grant(
         &mut self,
         request: impl tonic::IntoRequest<pb::LeaseGrantRequest>,
     ) -> Result<tonic::Response<pb::LeaseGrantResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Lease/LeaseGrant");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn lease_revoke(
         &mut self,
         request: impl tonic::IntoRequest<pb::LeaseRevokeRequest>,
     ) -> Result<tonic::Response<pb::LeaseRevokeResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Lease/LeaseRevoke");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn lease_keep_alive(
         &mut self,
         request: impl tonic::IntoStreamingRequest<Message = pb::LeaseKeepAliveRequest>,
     ) -> Result<tonic::Response<tonic::codec::Streaming<pb::LeaseKeepAliveResponse>>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Lease/LeaseKeepAlive");
-        self.transport
+        self.service
             .streaming(request.into_streaming_request(), path)
             .await
     }
@@ -52,14 +52,14 @@ where
         request: impl tonic::IntoRequest<pb::LeaseTimeToLiveRequest>,
     ) -> Result<tonic::Response<pb::LeaseTimeToLiveResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Lease/LeaseTimeToLive");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
     pub async fn lease_leases(
         &mut self,
         request: impl tonic::IntoRequest<pb::LeaseLeasesRequest>,
     ) -> Result<tonic::Response<pb::LeaseLeasesResponse>> {
         let path = http::uri::PathAndQuery::from_static("/etcdserverpb.Lease/LeaseLeases");
-        self.transport.unary(request.into_request(), path).await
+        self.service.unary(request.into_request(), path).await
     }
 }
 #[derive(Debug, Clone)]
@@ -119,11 +119,11 @@ where
 
 impl<S> LeaseClient<S>
 where
-    S: GrpcService + Send,
+    S: GrpcService,
 {
-    pub(crate) fn new(transport: S) -> Self {
+    pub(crate) fn new(service: S) -> Self {
         LeaseClient {
-            inner: InnerLeaseClient::new(transport),
+            inner: InnerLeaseClient::new(service),
         }
     }
 
@@ -372,7 +372,7 @@ pub struct DoLeaseKeepAlive<'a, S> {
 
 impl<'a, S> DoLeaseKeepAlive<'a, S>
 where
-    S: GrpcService + Send,
+    S: GrpcService,
 {
     pub fn new(lease_id: i64, client: &'a mut LeaseClient<S>) -> Self {
         DoLeaseKeepAlive { lease_id, client }
@@ -406,7 +406,7 @@ impl<'a, S> fmt::Debug for DoLeaseKeepAlive<'a, S> {
 
 impl<'a, S> IntoFuture for DoLeaseKeepAlive<'a, S>
 where
-    S: GrpcService + Send,
+    S: GrpcService,
 {
     type Output = Result<LeaseKeepAliver>;
     type IntoFuture = Pin<Box<dyn Future<Output = Result<LeaseKeepAliver>> + 'a>>;

@@ -1,10 +1,10 @@
-use etcdv3client::{Client, Error};
+use etcdv3client::{Error, EtcdClient};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let endpoint = "http://localhost:2379";
     let cred = None;
-    let mut client = Client::new(vec![endpoint], cred).await?;
+    let mut client = EtcdClient::new(vec![endpoint], cred).await?;
 
     let key = "/hello";
     // use convenience api under Client.
