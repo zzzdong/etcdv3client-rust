@@ -11,20 +11,20 @@ fn gen_pb_code() {
     tonic_build::configure()
         .build_server(false)
         .out_dir("src/pb/")
-        .compile(&["proto/auth.proto"], &["proto/"])
+        .compile_protos(&["proto/auth.proto"], &["proto/"])
         .unwrap_or_else(|e| panic!("protobuf compilation failed: {}", e));
 
     // Build kv.proto
     tonic_build::configure()
         .build_server(false)
         .out_dir("src/pb/")
-        .compile(&["proto/kv.proto"], &["proto/"])
+        .compile_protos(&["proto/kv.proto"], &["proto/"])
         .unwrap_or_else(|e| panic!("protobuf compilation failed: {}", e));
 
     // Build rpc.proto
     tonic_build::configure()
         .build_server(false)
         .out_dir("src/pb/")
-        .compile(&["proto/rpc.proto"], &["proto/"])
+        .compile_protos(&["proto/rpc.proto"], &["proto/"])
         .unwrap_or_else(|e| panic!("protobuf compilation failed: {}", e));
 }

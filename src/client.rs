@@ -7,7 +7,7 @@ use crate::pb;
 use crate::watch::{WatchClient, Watcher};
 
 use http::Uri;
-use tonic::transport::{channel::Channel, Endpoint};
+use tonic::transport::{Endpoint, channel::Channel};
 
 pub type EtcdClient = Client<CredentialInterceptor<TonicClient>>;
 

@@ -2,10 +2,10 @@ use std::fmt;
 use std::future::{Future, IntoFuture};
 use std::pin::Pin;
 
-use tokio::sync::mpsc::{channel, Sender};
-use tonic::codec::Streaming;
+use tokio::sync::mpsc::{Sender, channel};
 use tonic::IntoRequest;
 use tonic::IntoStreamingRequest;
+use tonic::codec::Streaming;
 
 use crate::error::{ErrKind, Error, Result};
 use crate::grpc::GrpcService;

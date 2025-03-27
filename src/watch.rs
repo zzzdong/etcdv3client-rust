@@ -7,9 +7,9 @@ use crate::grpc::GrpcService;
 use crate::pb;
 use crate::utils::build_prefix_end;
 
-use tokio::sync::mpsc::{channel, Sender};
-use tonic::codec::Streaming;
+use tokio::sync::mpsc::{Sender, channel};
 use tonic::IntoStreamingRequest;
+use tonic::codec::Streaming;
 
 const MPSC_CHANNEL_SIZE: usize = 1;
 

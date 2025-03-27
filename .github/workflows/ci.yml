@@ -1,0 +1,67 @@
+name: Rust Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      etcd:
+        image: quay.io/coreos/etcd:v3.5.0
+        ports:
+          - 2379:2379 # etcd client port
+        options: >-
+          --name etcd-server
+          --data-dir /tmp/etcd-data
+          --listen-client-urls http://0.0.0.0:2379
+          --advertise-client-urls http://127.0.0.1:2379
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Run tests
+        env:
+          ETCD_ENDPOINTS: "http://localhost:2379"
+        run: cargo test --test test_kv
+
+  test-authenticated-client:
+    runs-on: ubuntu-latest
+
+    services:
+      etcd:
+        image: quay.io/coreos/etcd:v3.5.0
+        ports:
+          - 2379:2379 # etcd client port
+        options: >-
+          --name etcd-server
+          --data-dir /tmp/etcd-data
+          --listen-client-urls http://0.0.0.0:2379
+          --advertise-client-urls http://127.0.0.1:2379
+
+    steps:
+      - name: Enable etcd authentication and create user
+        run: |
+          ETCDCTL_API=3 etcdctl --endpoints=http://localhost:2379 user add root <<EOF
+          123456
+          EOF
+          ETCDCTL_API=3 etcdctl --endpoints=http://localhost:2379 auth enable
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Run tests
+        env:
+          ETCD_ENDPOINTS: "http://localhost:2379"
+        run: cargo test --test test_authenticated
