@@ -21,7 +21,7 @@ pub trait GrpcService: Send + Clone + std::fmt::Debug {
     ) -> impl Future<Output = Result<tonic::Response<T>>> + Send
     where
         S: futures::Stream<Item = M> + Send + 'static,
-        M: prost::Message + Clone + Send + Sync + 'static,
+        M: prost::Message + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static;
 
     fn server_streaming<M, T>(
@@ -40,7 +40,7 @@ pub trait GrpcService: Send + Clone + std::fmt::Debug {
     ) -> impl Future<Output = Result<tonic::Response<tonic::Streaming<T>>>> + Send
     where
         S: futures::Stream<Item = M> + Send + 'static,
-        M: prost::Message + Clone + Send + Sync + 'static,
+        M: prost::Message + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static;
 }
 
@@ -83,7 +83,7 @@ impl TonicClient {
     ) -> Result<tonic::Response<T>>
     where
         S: futures::Stream<Item = M> + Send + 'static,
-        M: prost::Message + Clone + Send + Sync + 'static,
+        M: prost::Message + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static,
     {
         self.inner.ready().await.map_err(|e| {
@@ -130,7 +130,7 @@ impl TonicClient {
     ) -> Result<tonic::Response<tonic::Streaming<T>>>
     where
         S: futures::Stream<Item = M> + Send + 'static,
-        M: prost::Message + Clone + Send + Sync + 'static,
+        M: prost::Message + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static,
     {
         self.inner.ready().await.map_err(|e| {
@@ -168,7 +168,7 @@ impl GrpcService for TonicClient {
     ) -> Result<tonic::Response<T>>
     where
         S: futures::Stream<Item = M> + Send + 'static,
-        M: prost::Message + Clone + Send + Sync + 'static,
+        M: prost::Message + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static,
     {
         self.client_streaming(req, path).await
@@ -193,7 +193,7 @@ impl GrpcService for TonicClient {
     ) -> Result<tonic::Response<tonic::Streaming<T>>>
     where
         S: futures::Stream<Item = M> + Send + 'static,
-        M: prost::Message + Clone + Send + Sync + 'static,
+        M: prost::Message + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static,
     {
         self.streaming(req, path).await
@@ -263,7 +263,7 @@ where
     ) -> Result<tonic::Response<T>>
     where
         S: futures::Stream<Item = M> + Send + 'static,
-        M: prost::Message + Clone + Send + Sync + 'static,
+        M: prost::Message + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static,
     {
         // when streaming, always refresh token.
@@ -307,7 +307,7 @@ where
     ) -> Result<tonic::Response<tonic::Streaming<T>>>
     where
         S: futures::Stream<Item = M> + Send + 'static,
-        M: prost::Message + Clone + Send + Sync + 'static,
+        M: prost::Message + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static,
     {
         // when streaming, always refresh token.
@@ -394,7 +394,7 @@ where
     ) -> Result<tonic::Response<T>>
     where
         S: futures::Stream<Item = M> + Send + 'static,
-        M: prost::Message + Clone + Send + Sync + 'static,
+        M: prost::Message + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static,
     {
         CredentialInterceptor::client_streaming(self, req, path).await
@@ -419,7 +419,7 @@ where
     ) -> Result<tonic::Response<tonic::Streaming<T>>>
     where
         S: futures::Stream<Item = M> + Send + 'static,
-        M: prost::Message + Clone + Send + Sync + 'static,
+        M: prost::Message + Send + Sync + 'static,
         T: prost::Message + Default + Send + Sync + 'static,
     {
         CredentialInterceptor::streaming(self, req, path).await

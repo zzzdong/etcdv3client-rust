@@ -10,6 +10,7 @@ fn gen_pb_code() {
     // Build auth.proto
     tonic_build::configure()
         .build_server(false)
+        .build_client(false)
         .out_dir("src/pb/")
         .compile_protos(&["proto/auth.proto"], &["proto/"])
         .unwrap_or_else(|e| panic!("protobuf compilation failed: {}", e));
@@ -17,6 +18,7 @@ fn gen_pb_code() {
     // Build kv.proto
     tonic_build::configure()
         .build_server(false)
+        .build_client(false)
         .out_dir("src/pb/")
         .compile_protos(&["proto/kv.proto"], &["proto/"])
         .unwrap_or_else(|e| panic!("protobuf compilation failed: {}", e));
@@ -24,6 +26,7 @@ fn gen_pb_code() {
     // Build rpc.proto
     tonic_build::configure()
         .build_server(false)
+        .build_client(false)
         .out_dir("src/pb/")
         .compile_protos(&["proto/rpc.proto"], &["proto/"])
         .unwrap_or_else(|e| panic!("protobuf compilation failed: {}", e));
