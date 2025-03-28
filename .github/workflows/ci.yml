@@ -59,11 +59,10 @@ jobs:
 
       - name: Enable etcd authentication and create user
         run: |
-          docker exec "${{ job.services.etcd.id }}" etcdctl user add root <<EOF
-          123456
-          EOF
+          docker exec "${{ job.services.etcd.id }}" etcdctl user add root:123456
+          docker exec "${{ job.services.etcd.id }}" etcdctl user grant-role root root
           docker exec "${{ job.services.etcd.id }}" etcdctl auth enable
-      
+
       - name: Run tests with authentication
         env:
           ETCD_ENDPOINTS: "http://localhost:2379"
