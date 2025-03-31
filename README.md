@@ -54,7 +54,7 @@ More examples can be found in [`examples`].
 
 ## Supported Rust Versions
 
- The current MSRV is 1.75.0.
+ The current MSRV is 1.85.1.
 
 ## License
 
